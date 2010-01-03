@@ -1,4 +1,4 @@
-from Settings import SettingsModel
+from consider.settings import SettingsModel
 import os.path
 import urllib2
 import hashlib

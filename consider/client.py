@@ -1,12 +1,11 @@
-#!/usr/bin/env python
 
 import sys, signal
-from Settings import SettingsController
-from UpdateChecker import UpdateCheckerController
+from settings import SettingsController
+from updatechecker import UpdateCheckerController
 from PyQt4.QtCore import SIGNAL, SLOT
 from PyQt4.QtGui import QMenu, QSystemTrayIcon, QApplication, QDialog, QWidget
 
-verbose = 0
+verbose = 0 
 
 def parseArguments(args):
     global verbose
@@ -14,6 +13,12 @@ def parseArguments(args):
         verbose = 1
 
 class ClientApplication():
+    """Creates the client application
+
+    The application appears as an icon in the system tray, and allows the user
+    to control is graphically.
+
+    """
     def __init__(self, args=None):
         self.args = args
 
@@ -69,6 +74,3 @@ class ClientApplication():
         if verbose:
             print 'Stoppping client...'
 
-if __name__ == '__main__':
-    client = ClientApplication(sys.argv)
-    client.start()

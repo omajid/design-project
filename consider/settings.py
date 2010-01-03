@@ -3,7 +3,14 @@ from PyQt4.QtGui import QDialog
 from PyQt4.QtGui import QLabel, QLineEdit, QPushButton
 from PyQt4.QtGui import QGridLayout, QHBoxLayout
 
+""" A MVC system for the settings dialog shown to the user
+
+"""
+
 class SettingsController(object):
+    """ The controller in the MCV model for settings
+
+    """
     def __init__(self):
         self._model = SettingsModel()
         self._view = SettingsView(self, self._model)
@@ -22,8 +29,8 @@ class SettingsController(object):
 
 
 class SettingsModel(object):
-    """
-    Defines a model for the user's settings
+    """ Defines a model for the user's settings
+
     """
 
     def __init__(self):

@@ -1,0 +1,12 @@
+
+# python 
+*.pyc
+
+# twisted
+twistd.log
+twistd.pid
+
+# temporary files, and cache created by program
+/cache
+user\.settings
+
