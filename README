@@ -3,9 +3,9 @@ Web Site Monitoring and Update Notification
 
 (codename: consider)
 
-This is a client-server programt that allows users to monitor websites for 
-changes
+This is a client-server program that allows users to monitor websites for 
+changes. This is currently exteremly unstable. Development has barely started.
 
 Developers:
   Syed Alimul Huda
-  Omair Majid (omair.majid@utoronto.ca)
+  Omair Majid 

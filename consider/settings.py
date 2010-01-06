@@ -3,6 +3,9 @@ from PyQt4.QtGui import QDialog
 from PyQt4.QtGui import QLabel, QLineEdit, QPushButton
 from PyQt4.QtGui import QGridLayout, QHBoxLayout
 
+import xmlrpclib
+
+
 """ A MVC system for the settings dialog shown to the user
 
 """
@@ -15,11 +18,11 @@ class SettingsController(object):
         self._model = SettingsModel()
         self._view = SettingsView(self, self._model)
 
-    def addWebsite(self, website):
-        self._model.addWebsite(website)
+    def addWebPage(self, webPage):
+        self._model.addWebPage(webPage)
 
-    def removeWebsite(self, website):
-        self._model.removeWebsite(website)
+    def removeWebPage(self, webPage):
+        self._model.removeWebPage(webPage)
 
     def getModel(self):
         return self._model
@@ -34,58 +37,29 @@ class SettingsModel(object):
     """
 
     def __init__(self):
-        self.userSettingsDatabase = 'user.settings'
         self._loadSettings()
 
     def _loadSettings(self):
-        self.username = 'Omair'
+        self.username = 'test'
         self.password = 'test'
+        self.serverAddress = 'http://localhost:1055'
         self.observers = []
-        self.websiteList = []
-        import sqlite3
-        connection = sqlite3.connect(self.userSettingsDatabase)
-        try:
-            cursor = connection.cursor()
-            print('Reading database')
-            rows = cursor.execute('''SELECT name, link FROM Websites''')
-            for row in rows:
-               self.websiteList.append((row[0], row[1]))
-        except:
-            print('Error reading database')
-            pass
+        self.webPageList = []
 
-        # FIXME
+        self.server = xmlrpclib.Server(self.serverAddress)
+        pages = self.server.getWebPages(self.username)
+        print('Settings from server:')
+        print(str(pages))
+        for page in pages:
+            print(str(page))
+            self.webPageList.append(page)
+        
         self._notifyObservers()
 
     def _saveSettings(self):
-        import sqlite3
-
-        connection = sqlite3.connect(self.userSettingsDatabase)
-        cursor = connection.cursor()
-        print('Clearing previous entries')
-        try:
-            cursor.execute('''DROP TABLE Websites''')
-        except:
-            print('Error clearing previous entries')
-
-        print('Creating table')
-        try:
-            cursor.execute('''CREATE TABLE Websites 
-                (id INTEGER PRIMARY KEY ASC,
-                name TEXT,
-                link TEXT
-                )''')
-        except sqlite3.OperationalError:
-            print('Table already exists')
-        connection.commit()
-
-        print('Storing entries')
-        for name, link in self.websiteList:
-            print('name: ' + str(name) + ' link: ' + str(link))
-            t = (unicode(name), unicode(link))
-            cursor.execute('INSERT INTO Websites (id, name, link) VALUES (NULL, ?, ?)', t)
-        connection.commit()
-        cursor.close()
+        self.server.addUser(self.username)
+        for webPage in self.webPageList:
+            self.server.addWebPage(self.username, unicode(webPage))
 
     def getViewTitle(self):
         return 'Settings'
@@ -114,34 +88,28 @@ class SettingsModel(object):
         self._saveSettings()
         self._notifyObservers()
 
-    def getWebsiteList(self):
-        return self.websiteList
+    def getWebPageList(self):
+        return self.webPageList
 
-    def addWebsite(self, website):
-        website = self._sanitizeWebsite(website)
-        self.websiteList.append(website)
+    def addWebPage(self, webPage):
+        #webPage.sanitize() 
+        self.webPageList.append(webPage)
         self._saveSettings()
         self._notifyObservers()
 
-    def _sanitizeWebsite(self, website):
-        link = unicode(website[1])
-        if (not link.startswith('http://') ) and (not link.startswith('https://')):
-                link = 'http://' + link
-        return (website[0], link)
+    def containsWebPage(self, webPage):
+        return webPage in self.webPageList
 
-    def containsWebsite(self, website):
-        return website in self.websiteList
-
-    def removeWebsite(self, website):
-        self.websiteList.remove(website)
+    def removeWebPage(self, webPage):
+        self.webPageList.remove(webPage)
         self._saveSettings()
         self._notifyObservers()
 
 class SettingsView(QDialog):
     def __init__(self, controller=None, model=None):
         super(QDialog, self).__init__(None)
-        self.newWebsiteName = None
-        self.newWebsiteLink = None
+        self.newWebPageName = None
+        self.newWebPageLink = None
         self.controller = controller
         self.model = model
         self.model.addObserver(self)
@@ -149,37 +117,40 @@ class SettingsView(QDialog):
     def notify(self):
         self.updateUi()
 
-    def addNewWebsite(self):
-        self.controller.addWebsite((self.newWebsiteName.text(), self.newWebsiteLink.text()))
+    def addNewWebPage(self):
+        webPage = self.newWebPageLink.text()
+        self.controller.addWebPage(webPage)
 
-    def removeWebsiteBuilder(self, website):
-        def removeWebsite():
-            storedWebsite = website
-            self.controller.removeWebsite(website)
-        return removeWebsite
+    def removeWebPageBuilder(self, webPage):
+        def removeWebPage():
+            storedWebPage = webPage
+            self.controller.removeWebPage(webPage)
+        return removeWebPage
 
-    def addWebsiteListToLayout(self, gridLayout, staringRow):
+    def addWebPageListToLayout(self, gridLayout, staringRow):
         """Returns the next row that can be used in the grid layout"""
-        websites = self.model.getWebsiteList()
+        webPages = self.model.getWebPageList()
+        print(str(webPages))
         row = staringRow - 1;
-        for (name, link) in websites:
+        for webPage in webPages:
+            print(str(webPage))
             row = row + 1
-            nameLineEdit = QLineEdit(name)
+            nameLineEdit = QLineEdit('None')
             gridLayout.addWidget(nameLineEdit, row, 0)
-            linkLineEdit = QLineEdit(link)
+            linkLineEdit = QLineEdit(webPage)
             gridLayout.addWidget(linkLineEdit, row, 1)
             removeButton = QPushButton('Remove')
-            self.connect(removeButton, SIGNAL('clicked()'), self.removeWebsiteBuilder((name,link)))
+            self.connect(removeButton, SIGNAL('clicked()'), self.removeWebPageBuilder((webPage)))
             gridLayout.addWidget(removeButton, row, 2)
         
         # add a blank line for adding new entries
         row = row + 1
-        self.newWebsiteName = QLineEdit("<Name>")
-        gridLayout.addWidget(self.newWebsiteName, row, 0)
-        self.newWebsiteLink = QLineEdit("<Location>")
-        gridLayout.addWidget(self.newWebsiteLink, row, 1)
+        self.newWebPageName = QLineEdit("<Name>")
+        gridLayout.addWidget(self.newWebPageName, row, 0)
+        self.newWebPageLink = QLineEdit("<Location>")
+        gridLayout.addWidget(self.newWebPageLink, row, 1)
         addButton = QPushButton("Add")
-        self.connect(addButton, SIGNAL("clicked()"), self.addNewWebsite)
+        self.connect(addButton, SIGNAL("clicked()"), self.addNewWebPage)
         gridLayout.addWidget(addButton, row, 2)
         return row+1
 
@@ -229,7 +200,7 @@ class SettingsView(QDialog):
         layout.addWidget(passwordLineEdit, row, 1, spanOneRow, spanTwoColumns)
         
         row = row + 1
-        row = self.addWebsiteListToLayout(layout, row)
+        row = self.addWebPageListToLayout(layout, row)
 
         okButton = QPushButton('OK')
         self.connect(okButton, SIGNAL('clicked()'), self.accept)
