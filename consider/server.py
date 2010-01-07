@@ -37,45 +37,60 @@ class MonitorService(service.Service):
         return rpcservice.XmlRpcUsers(self)
 
     def getUsers(self):
+        log.msg('REQUEST: getUsers')
+        log.msg('Returning: ' + str(self.users.keys()))
         return defer.succeed(self.users.keys())
 
     def addUser(self, user):
+        log.msg('REQUEST: addUser(' + str(user) + ')' )
         if not user in self.users:
+            log.msg('added user with no list of websites')
             self.users[user] = []
             return defer.succeed([])
         else:
             return defer.succeed([])
 
     def removeUser(self, user):
+        log.msg('REQUEST: removeUser(' +  str(removeUser) + ')')
         if not user in self.user:
+            log.msg('No such user')
             return defer.fail(user)
         else:
             del self.users[user]
+            log.msg('Removed user')
             return defer.succeed(self.user.keys())
     
     def getWebPages(self, user):
+        log.msg('REQUEST: getWebPages(' + str(user) + ')')
         if user in self.users:
-            print(str(self.users[user]))
+            log.msg('Returning: ' + str(self.users[user]))
             return defer.succeed(self.users[user])
         else:
             return defer.succeed([])
 
-    def addWebPage(self, user, webpage):
-        webpages = self.users[user]
-        if not webpage in webpages:
-            webpages.append(webpage)
-        return defer.succeed(webpages)
+    def addWebPage(self, user, webPage):
+        log.msg('REQUEST: addWebPage(' + str(user) + ', ' + str(webPage) + ')')
+        webPages = self.users[user]
+        if not webPage in webPages:
+            log.msg('Added web page')
+            webPages.append(webPage)
+        return defer.succeed(webPages)
 
-    def removeWebPage(self, user, webpage):
+    def removeWebPage(self, user, webPage):
+        log.msg('REQUEST: removeWebPage(' + str(user) + ', ' + str(webPage) + ')')
         if user in self.users:
-            if webpage in self.users[user]:
-                self.users[user].remove(webpage)
+            if webPage in self.users[user]:
+                self.users[user].remove(webPage)
+                log.msg('Removed web page for user')
                 return defer.succeed([])
             return defer.fail([])
         return defer.fail([])
             
-    def getWebPageContent(self, user, webpage):
-        return defer.succeed(self.cache.cacheWebPage(webpage))
+    def getWebPageContent(self, user, webPage):
+        log.msg('REQUEST: getWebPageContent(' + str(user) + ', ' + str(webPage) + ')')
+        return defer.succeed(self.cache.cacheWebPage(webPage))
 
-    def getWebPageDiff(self, user, webpage):
-        return defer.succeed(self.cache.getDiffHtml(webpage))
+    def getWebPageDiff(self, user, webPage):
+        log.msg('REQUEST: getUsers')
+        log.msg('Returning: ' + str(self.users.keys()))
+        return defer.succeed(self.cache.getDiffHtml(webPage))
