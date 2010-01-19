@@ -78,9 +78,9 @@ class WebPageCache:
     def cacheWebPage(self, webPage):
         import datetime
         print ('caching webPage' + str(webPage))
-        data = urllib2.urlopen(webPage.url)
-        cacheLocation = str(self._getCacheLocation(webPage.url))
-        print('Cache location for ' + address + ' is ' + cacheLocation)
+        data = urllib2.urlopen(webPage)
+        cacheLocation = str(self._getCacheLocation(webPage))
+        print('Cache location for ' + webPage + ' is ' + cacheLocation)
         if not os.path.isdir(cacheLocation):
             dir = os.makedirs(cacheLocation)
         cacheLocation = os.path.join(cacheLocation, str(datetime.datetime.now().isoformat()))
@@ -91,8 +91,9 @@ class WebPageCache:
         print('cached ' + str(webPage) + ' at ' + os.path.abspath(cacheLocation))
         return rawData
 
-    def getCacheContentsForDiff(self, webPage):
-        address = webPage
+    def getCacheContentsForDiff(self, website):
+        import difflib
+        address = website
         cacheLocation = self._getCacheLocation(address)
         print('Diffing:' + cacheLocation)
         listOfFiles = os.listdir(self._getCacheLocation(address))

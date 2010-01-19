@@ -56,7 +56,7 @@ class MonitorService(service.Service):
         else:
             del self.users[user]
             log.msg('Removed user')
-            return defer.succeed(self.user.keys())
+            return defer.succeed(self.users.keys())
     
     def getWebPages(self, user):
         log.msg('REQUEST: getWebPages(' + str(user) + ')')
