@@ -5,7 +5,6 @@ from twisted.web import server
 from twisted.python import log
 
 from consider import rpcservice, storage
-#from consider.webpage import WebPage
 
 class MasterService(service.MultiService):
     def __init__(self):
@@ -17,7 +16,6 @@ class MasterService(service.MultiService):
                             self.rpcServerPort, 
                             server.Site(self.monitorService.getResource()))
         self.rpcServer.setServiceParent(self)
-
 
         
 class MonitorService(service.Service):
@@ -91,6 +89,12 @@ class MonitorService(service.Service):
         return defer.succeed(self.cache.cacheWebPage(webPage))
 
     def getWebPageDiff(self, user, webPage):
-        log.msg('REQUEST: getUsers')
+        log.msg('REQUEST: getWebPageDiff')
         log.msg('Returning: ' + str(self.users.keys()))
         return defer.succeed(self.cache.getDiffHtml(webPage))
+
+    def getDiff(self, user, webPage):
+        log.msg('REQUEST: getDiff(' + str(user) + ', ' + str(webPage) + ')')
+        log.msg('Returning: ' + str(self.users.keys()))
+        return defer.succeed(self.cache.getUnifiedDiff(webPage))
+

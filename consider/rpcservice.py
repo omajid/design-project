@@ -18,16 +18,18 @@ class XmlRpcUsers(xmlrpc.XMLRPC):
         return self.service.getUsers()
     def xmlrpc_addUser(self, user):
         return self.service.addUser(user)
-    def xmlrcp_removeUser(self, user):
+    def xmlrpc_removeUser(self, user):
         return self.service.removeUser(user)
 
     def xmlrpc_getWebPages(self, user):
         return self.service.getWebPages(user)
-    def xmlrpc_addWebPage(self, user, webpage):
-        return self.service.addWebPage(user, webpage)
-    def xmlrpc_removeWebPage(self, user, webpage):
-        return self.service.removeWebPage(user, webpage)
-    def xmlrpc_getWebPageContent(self, user, webpage):
-        return self.service.getWebPageContent(webpage)
-    def xmlrpc_getWebPageDiff(self, user, webpage):
-        return self.servive.getWebPageDiff(self, user, webpage)
+    def xmlrpc_addWebPage(self, user, webPage):
+        return self.service.addWebPage(user, webPage)
+    def xmlrpc_removeWebPage(self, user, webPage):
+        return self.service.removeWebPage(user, webPage)
+    def xmlrpc_getWebPageContent(self, user, webPage):
+        return self.service.getWebPageContent(webPage)
+    def xmlrpc_getWebPageDiff(self, user, webPage):
+        return self.servive.getWebPageDiff(self, user, webPage)
+    def xmlrpc_getDiff(self, user, webPage):
+        return self.service.getDiff(user, webPage)

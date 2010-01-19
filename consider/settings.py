@@ -4,6 +4,7 @@ from PyQt4.QtGui import QLabel, QLineEdit, QPushButton
 from PyQt4.QtGui import QGridLayout, QHBoxLayout
 
 import xmlrpclib
+from consider import designpatterns
 
 
 """ A MVC system for the settings dialog shown to the user
@@ -15,7 +16,7 @@ class SettingsController(object):
 
     """
     def __init__(self):
-        self._model = SettingsModel()
+        self._model = Settings()
         self._view = SettingsView(self, self._model)
 
     def addWebPage(self, webPage):
@@ -31,35 +32,38 @@ class SettingsController(object):
         self._view.show()
 
 
-class SettingsModel(object):
+class Settings(designpatterns.Borg):
     """ Defines a model for the user's settings
 
     """
+    # Borg design pattern
 
     def __init__(self):
-        self._loadSettings()
+        # load state when the state of the first borg is initialized
+        if 'username' not in self.__dict__:
+            self.username = 'test'
+            self.password = 'test'
+            self.serverAddress = 'http://localhost:1055'
+            self.observers = []
+            self.webPageList = []
 
-    def _loadSettings(self):
-        self.username = 'test'
-        self.password = 'test'
-        self.serverAddress = 'http://localhost:1055'
-        self.observers = []
-        self.webPageList = []
-
-        self.server = xmlrpclib.Server(self.serverAddress)
-        pages = self.server.getWebPages(self.username)
+    def loadSettings(self):
+        server = xmlrpclib.Server(self.serverAddress)
+        pages = server.getWebPages(self.username)
         print('Settings from server:')
         print(str(pages))
+        self.webPageList = []
         for page in pages:
             print(str(page))
             self.webPageList.append(page)
         
         self._notifyObservers()
 
-    def _saveSettings(self):
-        self.server.addUser(self.username)
+    def saveSettings(self):
+        server = xmlrpclib.Server(self.serverAddress)
+        server.addUser(self.username)
         for webPage in self.webPageList:
-            self.server.addWebPage(self.username, unicode(webPage))
+            server.addWebPage(self.username, unicode(webPage))
 
     def getViewTitle(self):
         return 'Settings'
@@ -77,7 +81,7 @@ class SettingsModel(object):
 
     def setUsername(self, username):
         self.username = username
-        self._saveSettings()
+        self.saveSettings()
         self._notifyObservers()
 
     def getPassword(self):
@@ -85,7 +89,7 @@ class SettingsModel(object):
 
     def setPassword(self, password):
         self.password = password
-        self._saveSettings()
+        self.saveSettings()
         self._notifyObservers()
 
     def getWebPageList(self):
@@ -94,7 +98,7 @@ class SettingsModel(object):
     def addWebPage(self, webPage):
         #webPage.sanitize() 
         self.webPageList.append(webPage)
-        self._saveSettings()
+        self.saveSettings()
         self._notifyObservers()
 
     def containsWebPage(self, webPage):
@@ -102,7 +106,7 @@ class SettingsModel(object):
 
     def removeWebPage(self, webPage):
         self.webPageList.remove(webPage)
-        self._saveSettings()
+        self.saveSettings()
         self._notifyObservers()
 
 class SettingsView(QDialog):
@@ -215,6 +219,10 @@ class SettingsView(QDialog):
         self.setLayout(layout) 
 
     def accept(self):
-        self.model._saveSettings()
+        self.model.saveSettings()
         # call QDialog's accept() to close the window
         QDialog.accept(self)
+
+    def reject(self):
+        self.model.loadSettings()
+        QDialog.reject(self)

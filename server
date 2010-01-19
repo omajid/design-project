@@ -1,2 +1,3 @@
 #!/bin/bash
-twistd -y server.tac
+twistd -y server.tac && tail -f twistd.log
+

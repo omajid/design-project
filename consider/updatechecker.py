@@ -1,4 +1,5 @@
-from consider.settings import SettingsModel
+from consider.settings import Settings
+import xmlrpclib
 import os.path
 import urllib2
 import hashlib
@@ -11,8 +12,8 @@ class UpdateCheckerController:
     def __init__(self, systemTrayIcon = None, settingsModel = None):
         self._systemTrayIcon = systemTrayIcon
         if settingsModel == None:
-            settingsModel = SettingsModel()
-            settingsModel._loadSettings()
+            settingsModel = Settings()
+            settingsModel.loadSettings()
         self._model = UpdateCheckerModel(settingsModel)
         self._view = UpdateCheckerView(self, self._model)
 
@@ -22,19 +23,23 @@ class UpdateCheckerController:
     def showNotificationForWebsite(self, website):
         self._view.show(website)
 
+
 class UpdateCheckerModel:
     def __init__(self, settingsModel = None):
         self.cacheLocation = 'cache'
         self.settingsModel = settingsModel
-
     
     def checkForUpdates(self):
+        import xmlrpclib
+        settings = Settings()
+        server = xmlrpclib.Server(settings.serverAddress)
         print('Check for updates')
-        for website in self.settingsModel.getWebsiteList():
-            print('Checking ' + str(website))
-            self.cacheWebsite(website)
+        webPages = server.getWebPages(settings.username)
+        for webPage in webPages:
+            print('Checking ' + str(webPage))
+            #self.cacheWebsite(webPage)
         print('Done checking for updates')
-        return self.settingsModel.getWebsiteList()
+        return webPages
 
 
 class UpdateCheckerView:
@@ -42,7 +47,11 @@ class UpdateCheckerView:
         self._controller = controller
         self._model = model 
 
-    def show(self, website):
+    def show(self, webPage):
+        settings = Settings()
+        server = xmlrpclib.Server(settings.serverAddress)
+        print(server.getDiff(settings.username, webPage))
+        return
         self.notificationDialog = QDialog()
         diffTextEdit = QTextEdit()
         htmlDiff = self._model.getDiffHtml(website)

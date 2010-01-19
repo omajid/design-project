@@ -91,8 +91,8 @@ class WebPageCache:
         print('cached ' + str(webPage) + ' at ' + os.path.abspath(cacheLocation))
         return rawData
 
-    def getDiffHtml(self, website):
-        address = website
+    def getCacheContentsForDiff(self, webPage):
+        address = webPage
         cacheLocation = self._getCacheLocation(address)
         print('Diffing:' + cacheLocation)
         listOfFiles = os.listdir(self._getCacheLocation(address))
@@ -101,7 +101,14 @@ class WebPageCache:
         olderFile = os.path.join(cacheLocation, listOfFiles[1])
         latestFileContents = [ line for line in open(latestFile)]
         olderFileContents = [ line for line in open(olderFile)]
-        print('Diffing: ' + str(olderFile) + ' and ' + str(latestFile))
+        return (olderFileContents, latestFileContents)
+
+    def getUnifiedDiff(self, webPage):
+        olderFileContents, latestFileContents = self.getCacheContentsForDiff(webPage)
+        return ''.join(difflib.unified_diff(olderFileConents, latestFileContents))
+
+    def getDiffHtml(self, webPage):
+        olderFileContents, latestFileContents = self.getCacheContentsForDiff(webPage)
         diff = difflib.HtmlDiff()
         htmlDiff = diff.make_table(olderFileContents, latestFileContents)
         print type(htmlDiff)
