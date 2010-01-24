@@ -3,6 +3,8 @@ import sqlite3
 import urllib2
 import os.path
 
+from twisted.python import log
+
 
 class Settings:
     """ Stores settings for users
@@ -63,7 +65,15 @@ class WebPageCache:
     """
 
     def __init__(self):
+        log.msg('initializing !!! WebPageCache !!!')
         self.cacheLocation = 'cache'
+        path = os.path.join('./' + self.cacheLocation)
+        try:
+            log.msg('WebPageCache.__init__(): creating cache dir: ' + path)
+            os.makedirs(path)
+        except OSError:
+            pass    # directory already exists
+                    # FIXME or can not be created
 
     def clean(self):
         # FIXME implement cleaning the cache
@@ -73,11 +83,13 @@ class WebPageCache:
         m = hashlib.md5()
         m.update(link)
         cacheLocation =  m.hexdigest() + '/'
-        return os.path.join(self.cacheLocation, cacheLocation)
+        location = os.path.join(self.cacheLocation, cacheLocation)
+        log.msg('WebPageCache._getCacheLocation: ' + str(link) + ' -> ' + str(location))
+        return location
 
     def cacheWebPage(self, webPage):
         import datetime
-        print ('caching webPage' + str(webPage))
+        log.msg('WebPageCache.cacheWebPage(): caching webPage' + str(webPage))
         data = urllib2.urlopen(webPage)
         cacheLocation = str(self._getCacheLocation(webPage))
         print('Cache location for ' + webPage + ' is ' + cacheLocation)
@@ -88,30 +100,35 @@ class WebPageCache:
         rawData = data.read()
         file.write(rawData)
         file.close()
-        print('cached ' + str(webPage) + ' at ' + os.path.abspath(cacheLocation))
+        log.msg('WebPageCache.cacheWebPage(): cached ' + str(webPage) + ' at ' + os.path.abspath(cacheLocation))
         return rawData
 
     def getCacheContentsForDiff(self, website):
         import difflib
         address = website
         cacheLocation = self._getCacheLocation(address)
-        print('Diffing:' + cacheLocation)
+        log.msg('Diffing:' + cacheLocation)
         listOfFiles = os.listdir(self._getCacheLocation(address))
         listOfFiles.sort(reverse=True) 
-        latestFile = os.path.join(cacheLocation, listOfFiles[0])
-        olderFile = os.path.join(cacheLocation, listOfFiles[1])
-        latestFileContents = [ line for line in open(latestFile)]
-        olderFileContents = [ line for line in open(olderFile)]
-        return (olderFileContents, latestFileContents)
+        try:
+            latestFile = os.path.join(cacheLocation, listOfFiles[0])
+            olderFile = os.path.join(cacheLocation, listOfFiles[1])
+            latestFileContents = [ line for line in open(latestFile)]
+            olderFileContents = [ line for line in open(olderFile)]
+            return (olderFileContents, latestFileContents)
+        except IndexError:
+            # no older file found; no diff
+            return ('', '')
 
     def getUnifiedDiff(self, webPage):
+        import difflib
         olderFileContents, latestFileContents = self.getCacheContentsForDiff(webPage)
-        return ''.join(difflib.unified_diff(olderFileConents, latestFileContents))
+        return ''.join(difflib.unified_diff(olderFileContents, latestFileContents))
 
     def getDiffHtml(self, webPage):
+        import difflib
         olderFileContents, latestFileContents = self.getCacheContentsForDiff(webPage)
         diff = difflib.HtmlDiff()
         htmlDiff = diff.make_table(olderFileContents, latestFileContents)
-        print type(htmlDiff)
-        print('Finished generating html diff')
+        log.msg('Finished generating html diff')
         return htmlDiff

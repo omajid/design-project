@@ -72,6 +72,7 @@ class MonitorService(service.Service):
         if not webPage in webPages:
             log.msg('Added web page')
             webPages.append(webPage)
+            self.cache.cacheWebPage(webPage)
         return defer.succeed(webPages)
 
     def removeWebPage(self, user, webPage):
