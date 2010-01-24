@@ -80,17 +80,22 @@ class Settings(designpatterns.Borg):
         return self.username
 
     def setUsername(self, username):
-        self.username = username
-        self.saveSettings()
+        oldUsername = username
+        try:
+            self.username = username
+            self.saveSettings()
+        except:
+            self.username = oldUsername
+            raise ConnectionError()
         self._notifyObservers()
 
-    def getPassword(self):
-        return self.password
-
-    def setPassword(self, password):
-        self.password = password
-        self.saveSettings()
-        self._notifyObservers()
+#    def getPassword(self):
+#        return self.password
+#
+#    def setPassword(self, password):
+#        self.password = password
+#        self.saveSettings()
+#        self._notifyObservers()
 
     def getWebPageList(self):
         return self.webPageList
@@ -192,18 +197,7 @@ class SettingsView(QDialog):
 
         self.setWindowTitle(self.model.getViewTitle())
         layout = QGridLayout()
-        usernameLabel = QLabel('Username:')
-        layout.addWidget(usernameLabel, row, 0)
-        usernameLineEdit = QLineEdit(self.model.getUsername())
-        layout.addWidget(usernameLineEdit, row, 1, spanOneRow, spanTwoColumns)
-
-        row = row + 1
-        passwordLabel = QLabel('Password:')
-        layout.addWidget(passwordLabel, row, 0)
-        passwordLineEdit = QLineEdit(self.model.getPassword())
-        layout.addWidget(passwordLineEdit, row, 1, spanOneRow, spanTwoColumns)
         
-        row = row + 1
         row = self.addWebPageListToLayout(layout, row)
 
         okButton = QPushButton('OK')
@@ -226,3 +220,6 @@ class SettingsView(QDialog):
     def reject(self):
         self.model.loadSettings()
         QDialog.reject(self)
+
+class ConnectionError:
+    pass

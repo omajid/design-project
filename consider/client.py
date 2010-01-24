@@ -1,9 +1,11 @@
 
 import sys, signal
-from settings import SettingsController
+from settings import SettingsController, Settings, ConnectionError
 from updatechecker import UpdateCheckerController
-from PyQt4.QtCore import SIGNAL, SLOT
-from PyQt4.QtGui import QMenu, QSystemTrayIcon, QApplication, QDialog, QWidget
+from PyQt4.QtCore import SIGNAL, SLOT, QString
+from PyQt4.QtGui import QMenu, QSystemTrayIcon, QApplication, QDialog, \
+        QWidget, QGridLayout, QPushButton, QLineEdit, QLabel, QHBoxLayout, \
+        QIcon
 
 verbose = 0 
 
@@ -52,6 +54,20 @@ class ClientApplication():
             self.settingsDialog = SettingsController()
         self.settingsDialog.show()
 
+    def showLoginWindow(self):
+        self.loginWindow = LoginWindow(self)
+        self.loginWindow.show()
+
+    def startMainProgram(self):
+        menu = self._buildMenu()
+        iconLocation = QString('/usr/share/icons/oxygen/16x16/actions/mail-mark-unread-new.png')
+        icon = QIcon(iconLocation)
+        self.systemTrayMenu = menu
+        self.systemTrayIcon = QSystemTrayIcon(icon)
+        self.systemTrayIcon.setContextMenu(self.systemTrayMenu)
+        self.systemTrayIcon.setToolTip('Web Notification Client')
+        self.systemTrayIcon.show()
+
     def start(self):
         parseArguments(self.args)
         if verbose:
@@ -59,18 +75,76 @@ class ClientApplication():
 
         self.application = QApplication(self.args, True)
         self.application.setQuitOnLastWindowClosed(False)
+        self.showLoginWindow()
 
         # allow exiting the application with ctrl-c
         # signal.signal(signal.SIGINT, signal.SIG_DFL)
-
-        self.systemTrayIcon = QSystemTrayIcon()
-        self.systemTrayIcon.setToolTip('Web Notification Client')
-        menu = self._buildMenu()
-        self.systemTrayIcon.setContextMenu(menu)
-        self.systemTrayIcon.show()
 
         self.application.exec_()
 
         if verbose:
             print 'Stoppping client...'
+
+
+class LoginWindow(QDialog):
+    def __init__(self, client=None):
+        QDialog.__init__(self)
+        self.client = client
+
+    def accept(self):
+        # FIXME authenticate with server here
+
+        settings = Settings()
+        try:
+            settings.setUsername(str(self.usernameLineEdit.text()))
+        except ConnectionError, e:
+            self.statusLine.setText('Unable to connect to server')
+            return
+
+        QDialog.accept(self)
+        self.client.startMainProgram()
+
+    def reject(self):
+        QDialog.reject(self)
+        self.client.application.quit()
+
+    def show(self):
+        self.updateUi()
+        QDialog.show(self)
+
+    def updateUi(self):
+        self.setWindowTitle('Login')
+
+        spanOneRow = 1
+        spanTwoColumns = 2
+        row = 0
+
+        layout = QGridLayout()
+        usernameLabel = QLabel('Username:')
+        layout.addWidget(usernameLabel, row, 0)
+        self.usernameLineEdit = QLineEdit('<Username>')
+        layout.addWidget(self.usernameLineEdit, row, 1, spanOneRow, spanTwoColumns)
+        row = row + 1
+
+        passwordLabel = QLabel('Password:')
+        layout.addWidget(passwordLabel, row, 0)
+        self.passwordLineEdit = QLineEdit('<Password>')
+        layout.addWidget(self.passwordLineEdit, row, 1, spanOneRow, spanTwoColumns)
+        row = row + 1
+
+        okButton = QPushButton('OK')
+        self.connect(okButton, SIGNAL('clicked()'), self.accept)
+        cancelButton = QPushButton('Cancel')
+        self.connect(cancelButton, SIGNAL('clicked()'), self.reject)
+        buttonLayout = QHBoxLayout()
+        buttonLayout.addWidget(okButton)
+        buttonLayout.addWidget(cancelButton)
+
+        layout.addLayout(buttonLayout, row, 1)
+        row = row + 1
+
+        self.statusLine = QLabel('')
+        layout.addWidget(self.statusLine, row, 0, spanOneRow, 3)
+
+        self.setLayout(layout)
 
