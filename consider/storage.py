@@ -103,6 +103,10 @@ class WebPageCache:
         log.msg('WebPageCache.cacheWebPage(): cached ' + str(webPage) + ' at ' + os.path.abspath(cacheLocation))
         return rawData
 
+    def startCaching(self, webPage):
+        from twisted.internet import reactor
+        reactor.callLater(0, self.cacheWebPage, webPage)
+
     def getCacheContentsForDiff(self, website):
         import difflib
         address = website

@@ -1,6 +1,6 @@
 
 from twisted.application import service, internet
-from twisted.internet import defer
+from twisted.internet import defer, task
 from twisted.web import server
 from twisted.python import log
 
@@ -30,6 +30,26 @@ class MonitorService(service.Service):
         # { user1: [ website1, website2], user2: [ website3, website4] ... }
         self.users = { }
         self.cache = storage.WebPageCache()
+
+        MINUTES = 60.0
+        self.updater = task.LoopingCall(self.updateCache)
+        self.updater.start(0.5 * MINUTES)
+
+        self.notifier = task.LoopingCall(self.sendNotifications)
+        self.notifier.start(1 * MINUTES)
+
+    def updateCache(self):
+        log.msg("MonitorService.updateCache(): started updating cache...");
+        allWebPages = []
+        for webPages in self.users.values():
+            allWebPages.extend(webPages)
+        listOfUniqueWebPages = list(set(allWebPages))
+
+        for webPage in listOfUniqueWebPages:
+            self.cache.startCaching(webPage)
+
+    def sendNotifications(self):
+        log.msg("MonitorService.sendNotifications(): Sending out notifications");
 
     def getResource(self):
         return rpcservice.XmlRpcUsers(self)
