@@ -1,7 +1,7 @@
 from PyQt4.QtCore import SIGNAL, SLOT
 from PyQt4.QtGui import QDialog 
 from PyQt4.QtGui import QLabel, QLineEdit, QPushButton
-from PyQt4.QtGui import QGridLayout, QHBoxLayout
+from PyQt4.QtGui import QGridLayout, QHBoxLayout, QCheckBox
 
 import xmlrpclib
 from consider import designpatterns
@@ -137,19 +137,42 @@ class SettingsView(QDialog):
             self.controller.removeWebPage(webPage)
         return removeWebPage
 
-    def addWebPageListToLayout(self, gridLayout, staringRow):
+    def addWebPageListToLayout(self, gridLayout, startingRow):
         """Returns the next row that can be used in the grid layout"""
         webPages = self.model.getWebPageList()
-        row = staringRow - 1;
+
+        print(str(webPages))
+        row = startingRow
+
+        nameLabel = QLabel('Name')
+        gridLayout.addWidget(nameLabel, row, 0)
+        webPageLabel = QLabel('WebPage:')
+        gridLayout.addWidget(webPageLabel, row, 1)
+
+        clientLabel = QLabel('Client Notification')
+        gridLayout.addWidget(clientLabel, row, 2)
+        emailLabel = QLabel('Email')
+        gridLayout.addWidget(emailLabel, row, 3)
+        smsLabel = QLabel('SMS')
+        gridLayout.addWidget(smsLabel, row, 4)
+
         for webPage in webPages:
             row = row + 1
             nameLineEdit = QLineEdit('None')
             gridLayout.addWidget(nameLineEdit, row, 0)
             linkLineEdit = QLineEdit(webPage)
             gridLayout.addWidget(linkLineEdit, row, 1)
+
+            clientCheck = QCheckBox()
+            gridLayout.addWidget(clientCheck, row, 2)
+            emailCheck = QCheckBox()
+            gridLayout.addWidget(emailCheck, row, 3)
+            smsCheck = QCheckBox()
+            gridLayout.addWidget(smsCheck, row, 4)
+
             removeButton = QPushButton('Remove')
             self.connect(removeButton, SIGNAL('clicked()'), self.removeWebPageBuilder((webPage)))
-            gridLayout.addWidget(removeButton, row, 2)
+            gridLayout.addWidget(removeButton, row, 5)
         
         # add a blank line for adding new entries
         row = row + 1
@@ -159,7 +182,7 @@ class SettingsView(QDialog):
         gridLayout.addWidget(self.newWebPageLink, row, 1)
         addButton = QPushButton("Add")
         self.connect(addButton, SIGNAL("clicked()"), self.addNewWebPage)
-        gridLayout.addWidget(addButton, row, 2)
+        gridLayout.addWidget(addButton, row, 5)
         return row+1
 
     def deleteLayouts(self, layout=None):
@@ -191,7 +214,6 @@ class SettingsView(QDialog):
         self.deleteLayouts()
 
         spanOneRow = 1
-        spanTwoColumns = 2
         row = 0
 
         self.setWindowTitle(self.model.getViewTitle())
@@ -207,7 +229,7 @@ class SettingsView(QDialog):
         buttonLayout.addWidget(okButton)
         buttonLayout.addWidget(cancelButton)
 
-        layout.addLayout(buttonLayout, row, 1)
+        layout.addLayout(buttonLayout, row, 2, spanOneRow, 4)
 
         self.setLayout(layout) 
 
