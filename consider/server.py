@@ -4,13 +4,13 @@ from twisted.internet import defer, task
 from twisted.web import server
 from twisted.python import log
 
-from consider import rpcservice, storage
+from consider import rpcservice, storage, configuration
 
 class MasterService(service.MultiService):
     def __init__(self):
         service.MultiService.__init__(self)
-
-        self.rpcServerPort = 1055
+        serverConfig = configuration.ServerConfiguration()
+        self.rpcServerPort = serverConfig.getPort()
         self.monitorService = MonitorService()
         self.rpcServer = internet.TCPServer(
                             self.rpcServerPort, 

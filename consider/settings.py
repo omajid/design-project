@@ -41,9 +41,12 @@ class Settings(designpatterns.Borg):
     def __init__(self):
         # load state when the state of the first borg is initialized
         if 'username' not in self.__dict__:
+            from consider.configuration import ClientConfiguration
+            clientConfiguration = ClientConfiguration()
             self.username = 'test'
             self.password = 'test'
-            self.serverAddress = 'http://localhost:1055'
+            self.serverAddress = 'http://' + clientConfiguration.getServer()
+            print('Connecting to server: ' + self.serverAddress)
             self.observers = []
             self.webPageList = []
 
