@@ -53,11 +53,8 @@ class Settings(designpatterns.Borg):
     def loadSettings(self):
         server = xmlrpclib.Server(self.serverAddress)
         pages = server.getWebPages(self.username)
-        print('Settings from server:')
-        print(str(pages))
         self.webPageList = []
         for page in pages:
-            print(str(page))
             self.webPageList.append(page)
         
         self._notifyObservers()
@@ -125,6 +122,7 @@ class SettingsView(QDialog):
         self.controller = controller
         self.model = model
         self.model.addObserver(self)
+        self.model.loadSettings()
 
     def notify(self):
         self.updateUi()
@@ -142,10 +140,8 @@ class SettingsView(QDialog):
     def addWebPageListToLayout(self, gridLayout, staringRow):
         """Returns the next row that can be used in the grid layout"""
         webPages = self.model.getWebPageList()
-        print(str(webPages))
         row = staringRow - 1;
         for webPage in webPages:
-            print(str(webPage))
             row = row + 1
             nameLineEdit = QLineEdit('None')
             gridLayout.addWidget(nameLineEdit, row, 0)
