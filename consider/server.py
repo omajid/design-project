@@ -117,5 +117,5 @@ class MonitorService(service.Service):
     def getDiff(self, user, webPage):
         log.msg('REQUEST: getDiff(' + str(user) + ', ' + str(webPage) + ')')
         log.msg('Returning: ' + str(self.users.keys()))
-        return defer.succeed(self.cache.getUnifiedDiff(webPage))
+        return defer.succeed(self.cache.getContentDiff(webPage))
 

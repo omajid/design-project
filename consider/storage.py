@@ -89,6 +89,8 @@ class WebPageCache:
 
     def cacheWebPage(self, webPage):
         import datetime
+        from BeautifulSoup import BeautifulSoup
+
         log.msg('WebPageCache.cacheWebPage(): caching webPage' + str(webPage))
         data = urllib2.urlopen(webPage)
         cacheLocation = str(self._getCacheLocation(webPage))
@@ -98,7 +100,8 @@ class WebPageCache:
         cacheLocation = os.path.join(cacheLocation, str(datetime.datetime.now().isoformat()))
         file = open(cacheLocation, 'w') 
         rawData = data.read()
-        file.write(rawData)
+        soup = BeautifulSoup(rawData)
+        file.write(soup.prettify())
         file.close()
         log.msg('WebPageCache.cacheWebPage(): cached ' + str(webPage) + ' at ' + os.path.abspath(cacheLocation))
         return rawData
@@ -136,3 +139,25 @@ class WebPageCache:
         htmlDiff = diff.make_table(olderFileContents, latestFileContents)
         log.msg('Finished generating html diff')
         return htmlDiff
+
+    def getContentDiff(self, webPage):
+        import difflib
+        from BeautifulSoup import BeautifulSoup
+
+        olderFileContents, latestFileContents = self.getCacheContentsForDiff(webPage)
+        newSoup = BeautifulSoup(''.join(latestFileContents))
+        oldSoup = BeautifulSoup(''.join(olderFileContents))
+
+        scripts_oldSoup = oldSoup.body.findAll('script')
+        [script_old.extract() for script_old in scripts_oldSoup]
+        scripts_newSoup = newSoup.body.findAll('script')
+        [script_new.extract() for script_new in scripts_newSoup]
+
+        oldSoupText = oldSoup.body(text = True)
+        newSoupText = newSoup.body(text = True)
+
+        diff_generator = difflib.unified_diff(oldSoupText, newSoupText, n = 0)
+        diff = [line for line in diff_generator]
+        diff = ''.join(diff)
+
+        return diff
