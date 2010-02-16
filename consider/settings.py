@@ -64,7 +64,9 @@ class Settings(designpatterns.Borg):
         self.webPages = {}
         # FIXME get the right notification options
         for page in pages:
-            self.webPages[page] = server.getNotificationTypes(page)
+            notificationOptions = options.NotificationOptions()
+            notificationOptions.setTypes(server.getNotificationTypes(self.username, page))
+            self.webPages[page] = notificationOptions
         
         self._notifyObservers()
 
@@ -73,7 +75,7 @@ class Settings(designpatterns.Borg):
         server.addUser(self.username)
         # FIXME
         for webPage in self.webPages:
-            server.addWebPage(self.username, unicode(webPage), self.webPages[webPage])
+            server.addWebPage(self.username, unicode(webPage), self.webPages[webPage].getTypes())
 
     def getViewTitle(self):
         return 'Settings'
@@ -107,8 +109,8 @@ class Settings(designpatterns.Borg):
 #        self.saveSettings()
 #        self._notifyObservers()
 
-    def getWebPageList(self):
-        return self.webPages.keys()
+    def getWebPages(self):
+        return self.webPages
 
     def addWebPage(self, webPage, options):
         # FIXME webPage.sanitize()
@@ -177,7 +179,7 @@ class SettingsView(QDialog):
 
         from consider.notifications import options
 
-        webPages = self.model.getWebPageList()
+        webPages = self.model.getWebPages()
 
         print(str(webPages))
         row = startingRow
@@ -202,16 +204,24 @@ class SettingsView(QDialog):
             gridLayout.addWidget(linkLineEdit, row, 1)
 
             clientCheck = QCheckBox()
+            if options.NOTIFICATION_TYPE_CLIENT in webPages[webPage].getTypes():
+                clientCheck.setChecked(1)
             self.connect(clientCheck,
                     SIGNAL('stateChanged(int)'),
                     self.checkBoxHandlerBuilder(webPage, options.NOTIFICATION_TYPE_CLIENT))
             gridLayout.addWidget(clientCheck, row, 2)
+
             emailCheck = QCheckBox()
+            if options.NOTIFICATION_TYPE_EMAIL in webPages[webPage].getTypes():
+                emailCheck.setChecked(1)
             self.connect(emailCheck,
                     SIGNAL('stateChanged(int)'),
                     self.checkBoxHandlerBuilder(webPage, options.NOTIFICATION_TYPE_EMAIL))
             gridLayout.addWidget(emailCheck, row, 3)
+
             smsCheck = QCheckBox()
+            if options.NOTIFICATION_TYPE_SMS in webPages[webPage].getTypes():
+                smsCheck.setChecked(1)
             self.connect(smsCheck,
                     SIGNAL('stateChanged(int)'),
                     self.checkBoxHandlerBuilder(webPage, options.NOTIFICATION_TYPE_SMS))

@@ -23,8 +23,10 @@ class XmlRpcUsers(xmlrpc.XMLRPC):
 
     def xmlrpc_getWebPages(self, user):
         return self.service.getWebPages(user)
-    def xmlrpc_addWebPage(self, user, webPage):
-        return self.service.addWebPage(user, webPage)
+    def xmlrpc_addWebPage(self, user, webPage, notificationTypes):
+        return self.service.addWebPage(user, webPage, notificationTypes)
+    def xmlrpc_getNotificationTypes(self, user, webPage):
+        return self.service.getNotificationTypes(user, webPage)
     def xmlrpc_removeWebPage(self, user, webPage):
         return self.service.removeWebPage(user, webPage)
     def xmlrpc_getWebPageContent(self, user, webPage):
