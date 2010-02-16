@@ -19,11 +19,17 @@ class SettingsController(object):
         self._model = Settings()
         self._view = SettingsView(self, self._model)
 
-    def addWebPage(self, webPage):
-        self._model.addWebPage(webPage)
+    def addWebPage(self, webPage, options):
+        self._model.addWebPage(webPage, options)
 
     def removeWebPage(self, webPage):
         self._model.removeWebPage(webPage)
+
+    def getWebPageOptions(self, webPage):
+        return self._model.getWebPageOptions(webPage)
+
+    def setWebPageOptions(self, webPage, option):
+        self._model.setWebPageOptions(webPage, options)
 
     def getModel(self):
         return self._model
@@ -36,7 +42,6 @@ class Settings(designpatterns.Borg):
     """ Defines a model for the user's settings
 
     """
-    # Borg design pattern
 
     def __init__(self):
         # load state when the state of the first borg is initialized
@@ -48,22 +53,27 @@ class Settings(designpatterns.Borg):
             self.serverAddress = 'http://' + clientConfiguration.getServer()
             print('Connecting to server: ' + self.serverAddress)
             self.observers = []
-            self.webPageList = []
+            # { webpage1 : options1, webpage2: options2 }
+            self.webPages = {}
 
     def loadSettings(self):
+        from consider.notifications import options
+
         server = xmlrpclib.Server(self.serverAddress)
         pages = server.getWebPages(self.username)
-        self.webPageList = []
+        self.webPages = {}
+        # FIXME get the right notification options
         for page in pages:
-            self.webPageList.append(page)
+            self.webPages[page] = server.getNotificationTypes(page)
         
         self._notifyObservers()
 
     def saveSettings(self):
         server = xmlrpclib.Server(self.serverAddress)
         server.addUser(self.username)
-        for webPage in self.webPageList:
-            server.addWebPage(self.username, unicode(webPage))
+        # FIXME
+        for webPage in self.webPages:
+            server.addWebPage(self.username, unicode(webPage), self.webPages[webPage])
 
     def getViewTitle(self):
         return 'Settings'
@@ -98,19 +108,25 @@ class Settings(designpatterns.Borg):
 #        self._notifyObservers()
 
     def getWebPageList(self):
-        return self.webPageList
+        return self.webPages.keys()
 
-    def addWebPage(self, webPage):
-        #webPage.sanitize() 
-        self.webPageList.append(webPage)
+    def addWebPage(self, webPage, options):
+        # FIXME webPage.sanitize()
+        self.webPages[webPage] = options
         self.saveSettings()
         self._notifyObservers()
 
+    def getWebPageOptions(self, webPage):
+        return self.webPages[webPage]
+
+    def setWebPageOptions(self, webPage, options):
+        self.webPages[webPage] = options
+
     def containsWebPage(self, webPage):
-        return webPage in self.webPageList
+        return webPage in self.webPages
 
     def removeWebPage(self, webPage):
-        self.webPageList.remove(webPage)
+        del self.webPages[webPage]
         self.saveSettings()
         self._notifyObservers()
 
@@ -129,7 +145,9 @@ class SettingsView(QDialog):
 
     def addNewWebPage(self):
         webPage = self.newWebPageLink.text()
-        self.controller.addWebPage(webPage)
+        from consider.notifications import options
+        notificationOptions = options.NotificationOptions()
+        self.controller.addWebPage(webPage, notificationOptions)
 
     def removeWebPageBuilder(self, webPage):
         def removeWebPage():
@@ -137,8 +155,28 @@ class SettingsView(QDialog):
             self.controller.removeWebPage(webPage)
         return removeWebPage
 
+    def checkBoxHandlerBuilder(self, webPage, notificationTypeHandled):
+        def function(checkStatus):
+            from consider.notifications import options
+            notificationOptions = self.controller.getWebPageOptions(webPage)
+            currentNotificationTypes = notificationOptions.getTypes()
+            if checkStatus:
+                if not notificationTypeHandled in currentNotificationTypes:
+                    currentNotificationTypes.append(notificationTypeHandled)
+                    notificationOptions.setTypes(currentNotificationTypes)
+            else:
+                if notificationTypeHandled in currentNotificationTypes:
+                    optionTypes = [type for type in currentNotificationTypes 
+                                    if not type == notificationTypeHandled]
+                    notificationOptions.setTypes(optionTypes)
+            print('DEBUG: updated options: ' + str(notificationOptions))
+        return function
+
     def addWebPageListToLayout(self, gridLayout, startingRow):
         """Returns the next row that can be used in the grid layout"""
+
+        from consider.notifications import options
+
         webPages = self.model.getWebPageList()
 
         print(str(webPages))
@@ -164,10 +202,19 @@ class SettingsView(QDialog):
             gridLayout.addWidget(linkLineEdit, row, 1)
 
             clientCheck = QCheckBox()
+            self.connect(clientCheck,
+                    SIGNAL('stateChanged(int)'),
+                    self.checkBoxHandlerBuilder(webPage, options.NOTIFICATION_TYPE_CLIENT))
             gridLayout.addWidget(clientCheck, row, 2)
             emailCheck = QCheckBox()
+            self.connect(emailCheck,
+                    SIGNAL('stateChanged(int)'),
+                    self.checkBoxHandlerBuilder(webPage, options.NOTIFICATION_TYPE_EMAIL))
             gridLayout.addWidget(emailCheck, row, 3)
             smsCheck = QCheckBox()
+            self.connect(smsCheck,
+                    SIGNAL('stateChanged(int)'),
+                    self.checkBoxHandlerBuilder(webPage, options.NOTIFICATION_TYPE_SMS))
             gridLayout.addWidget(smsCheck, row, 4)
 
             removeButton = QPushButton('Remove')
@@ -180,12 +227,13 @@ class SettingsView(QDialog):
         gridLayout.addWidget(self.newWebPageName, row, 0)
         self.newWebPageLink = QLineEdit("<Location>")
         gridLayout.addWidget(self.newWebPageLink, row, 1)
-        clientCheck = QCheckBox()
-        gridLayout.addWidget(clientCheck, row, 2)
-        emailCheck = QCheckBox()
-        gridLayout.addWidget(emailCheck, row, 3)
-        smsCheck = QCheckBox()
-        gridLayout.addWidget(smsCheck, row, 4)
+        # FIXME
+        #clientCheck = QCheckBox()
+        #gridLayout.addWidget(clientCheck, row, 2)
+        #emailCheck = QCheckBox()
+        #gridLayout.addWidget(emailCheck, row, 3)
+        #smsCheck = QCheckBox()
+        #gridLayout.addWidget(smsCheck, row, 4)
 
         addButton = QPushButton("Add")
         self.connect(addButton, SIGNAL("clicked()"), self.addNewWebPage)

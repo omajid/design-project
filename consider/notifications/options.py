@@ -4,23 +4,30 @@ NOTIFICATION_TYPE_CLIENT = 'client'
 NOTIFICATION_TYPE_SMS = 'sms'
 
 def getClientNotificationOption():
-    notifcation = NotificationOptions(NOTIFICATION_TYPE_CLIENT)
+    notifcation = NotificationOptions([NOTIFICATION_TYPE_CLIENT])
     return notification
 
 def getEmailNotificationOption():
-    notifcation = NotificationOptions(NOTIFICATION_TYPE_EMAIL)
+    notifcation = NotificationOptions([NOTIFICATION_TYPE_EMAIL])
     return notification
 
 def getSmsNotificationOption():
-    notifcation = NotificationOptions(NOTIFICATION_TYPE_SMS)
+    notifcation = NotificationOptions([NOTIFICATION_TYPE_SMS])
     return notification
 
-class NotificationOptions:
-    def __init__(self, type):
-        self.type = str(type)
+class NotificationOptions(object):
+    def __init__(self, types = []):
+        '''
 
-    def __str__():
-        return 'Notifying using: ' + self.type
+        types: a list of constants indicating the types of notification
+        '''
+        self.types = types
 
-    def getType():
-        return self.text
+    def __str__(self):
+        return 'Notifying using: ' + str(self.types)
+
+    def setTypes(self, types):
+        self.types = types
+
+    def getTypes(self):
+        return self.types
