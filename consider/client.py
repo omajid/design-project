@@ -60,7 +60,9 @@ class ClientApplication():
 
     def startMainProgram(self):
         menu = self._buildMenu()
-        iconLocation = QString('/usr/share/icons/oxygen/16x16/actions/mail-mark-unread-new.png')
+        from consider.configuration import ClientConfiguration
+        clientConfiguration = ClientConfiguration()
+        iconLocation = QString(clientConfiguration.getSystrayIcon())
         icon = QIcon(iconLocation)
         self.systemTrayMenu = menu
         self.systemTrayIcon = QSystemTrayIcon(icon)

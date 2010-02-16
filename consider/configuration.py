@@ -13,11 +13,20 @@ class ClientConfiguration(designpatterns.Borg):
             self.server = config.get('main', 'server')
             self.username = config.get('main', 'username')
 
+            self.systrayIcon = config.get('icons', 'systray')
+            self.newNotificationSystrayIcon = config.get('icons', 'new')
+
     def getServer(self):
         return self.server
 
     def getUsername(self):
         return self.username
+
+    def getSystrayIcon(self):
+        return self.systrayIcon
+
+    def getNewNotificationIcon(self):
+        return self.newNotificationSystrayIcon
 
 
 class ServerConfiguration(designpatterns.Borg):
