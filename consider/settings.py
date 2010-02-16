@@ -149,7 +149,7 @@ class SettingsView(QDialog):
         webPageLabel = QLabel('WebPage:')
         gridLayout.addWidget(webPageLabel, row, 1)
 
-        clientLabel = QLabel('Client Notification')
+        clientLabel = QLabel('Client')
         gridLayout.addWidget(clientLabel, row, 2)
         emailLabel = QLabel('Email')
         gridLayout.addWidget(emailLabel, row, 3)
@@ -180,6 +180,13 @@ class SettingsView(QDialog):
         gridLayout.addWidget(self.newWebPageName, row, 0)
         self.newWebPageLink = QLineEdit("<Location>")
         gridLayout.addWidget(self.newWebPageLink, row, 1)
+        clientCheck = QCheckBox()
+        gridLayout.addWidget(clientCheck, row, 2)
+        emailCheck = QCheckBox()
+        gridLayout.addWidget(emailCheck, row, 3)
+        smsCheck = QCheckBox()
+        gridLayout.addWidget(smsCheck, row, 4)
+
         addButton = QPushButton("Add")
         self.connect(addButton, SIGNAL("clicked()"), self.addNewWebPage)
         gridLayout.addWidget(addButton, row, 5)

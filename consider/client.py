@@ -1,11 +1,11 @@
-
-import sys, signal
-from settings import SettingsController, Settings, ConnectionError
-from updatechecker import UpdateCheckerController
 from PyQt4.QtCore import SIGNAL, SLOT, QString
 from PyQt4.QtGui import QMenu, QSystemTrayIcon, QApplication, QDialog, \
         QWidget, QGridLayout, QPushButton, QLineEdit, QLabel, QHBoxLayout, \
         QIcon
+import sys, signal
+
+from consider.settings import SettingsController, Settings, ConnectionError
+from consider.updatechecker import UpdateCheckerController
 
 verbose = 0 
 

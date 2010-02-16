@@ -1,5 +1,5 @@
 
-import designpatterns
+from consider import designpatterns
 
 class ClientConfiguration(designpatterns.Borg):
 

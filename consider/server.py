@@ -4,7 +4,7 @@ from twisted.internet import defer, task
 from twisted.web import server
 from twisted.python import log
 
-from consider import rpcservice, storage, configuration
+from consider import rpcservice, storage, configuration, account
 
 class MasterService(service.MultiService):
     def __init__(self):
@@ -27,8 +27,7 @@ class MonitorService(service.Service):
 
     def __init__(self):
 
-        # { user1: [ website1, website2], user2: [ website3, website4] ... }
-        self.users = { }
+        self.users = []
         self.cache = storage.WebPageCache()
 
         MINUTES = 60.0
@@ -41,8 +40,9 @@ class MonitorService(service.Service):
     def updateCache(self):
         log.msg("MonitorService.updateCache(): started updating cache...");
         allWebPages = []
-        for webPages in self.users.values():
-            allWebPages.extend(webPages)
+        for user in self.users:
+            for webPage in user.webPages:
+                allWebPages.extend(webPage)
         listOfUniqueWebPages = list(set(allWebPages))
 
         for webPage in listOfUniqueWebPages:
@@ -56,66 +56,97 @@ class MonitorService(service.Service):
 
     def getUsers(self):
         log.msg('REQUEST: getUsers')
-        log.msg('Returning: ' + str(self.users.keys()))
-        return defer.succeed(self.users.keys())
+        usernames = [ user.name for user in self.users]
+        log.msg('Returning: ' + usernames)
+        return defer.succeed(usernames)
 
-    def addUser(self, user):
-        log.msg('REQUEST: addUser(' + str(user) + ')' )
+    def addUser(self, username):
+        log.msg('REQUEST: addUser(' + str(username) + ')' )
+        user = account.UserAccount(username)
         if not user in self.users:
             log.msg('added user with no list of websites')
-            self.users[user] = []
-            return defer.succeed([])
+            self.users.append(user)
         else:
-            return defer.succeed([])
+            log.msg('user already exists')
+        return defer.succeed(user)
 
-    def removeUser(self, user):
+    def removeUser(self, username):
         log.msg('REQUEST: removeUser(' +  str(removeUser) + ')')
-        if not user in self.user:
+        user = account.UserAccount(username)
+        id = self._getIdForUser(user)
+        if id == None:
             log.msg('No such user')
-            return defer.fail(user)
+            return defer.fail([])
         else:
-            del self.users[user]
+            del self.users[id]
             log.msg('Removed user')
-            return defer.succeed(self.users.keys())
-    
-    def getWebPages(self, user):
-        log.msg('REQUEST: getWebPages(' + str(user) + ')')
-        if user in self.users:
-            log.msg('Returning: ' + str(self.users[user]))
-            return defer.succeed(self.users[user])
-        else:
             return defer.succeed([])
+    
+    def getWebPages(self, username):
+        log.msg('REQUEST: getWebPages(' + str(username) + ')')
+        user = account.UserAccount(username)
+        id = self._getIdForUser(user)
+        if id == None:
+            log.msg('No web pages found')
+            return defer.succeed([])
+        else:
+            webPages = [webPage for webPage in self.users[id].webPages] 
+            log.msg('Returning: ' + str(webPages))
+            return defer.succeed(webPages)
 
-    def addWebPage(self, user, webPage):
-        log.msg('REQUEST: addWebPage(' + str(user) + ', ' + str(webPage) + ')')
-        webPages = self.users[user]
-        if not webPage in webPages:
-            log.msg('Added web page')
-            webPages.append(webPage)
-            self.cache.cacheWebPage(webPage)
-        return defer.succeed(webPages)
+    def addWebPage(self, username, webPage):
+        log.msg('REQUEST: addWebPage(' + str(username) + ', ' + str(webPage) + ')')
+        user = account.UserAccount(username)
+        id = self._getIdForUser(user)
+        webPages = {}
+        if id == None:
+            log.msg('Invalid user')
+        else:
+            webPages = self.users[id].webPages
+            if not webPage in webPages:
+                log.msg('Added web page')
+                webPages[webPage] = None
+                self.cache.cacheWebPage(webPage)
+            else:
+                log.msg('web page already exists')
+        return defer.succeed([])
 
-    def removeWebPage(self, user, webPage):
-        log.msg('REQUEST: removeWebPage(' + str(user) + ', ' + str(webPage) + ')')
-        if user in self.users:
-            if webPage in self.users[user]:
-                self.users[user].remove(webPage)
+    def removeWebPage(self, username, webPage):
+        log.msg('REQUEST: removeWebPage(' + str(username) + ', ' + str(webPage) + ')')
+        user = account.UserAccount(username)
+        id = self._getIdForUser(user)
+        if id == None:
+            return defer.fail([])
+        else:
+            if webPage in self.users[id].webPages:
+                self.users[id].remove(webPage)
                 log.msg('Removed web page for user')
                 return defer.succeed([])
             return defer.fail([])
-        return defer.fail([])
             
-    def getWebPageContent(self, user, webPage):
-        log.msg('REQUEST: getWebPageContent(' + str(user) + ', ' + str(webPage) + ')')
+    def getWebPageContent(self, username, webPage):
+        log.msg('REQUEST: getWebPageContent(' + str(username) + ', ' + str(webPage) + ')')
+        user = account.UserAccount(username)
+        id = self._getIdForUser(user)
         return defer.succeed(self.cache.cacheWebPage(webPage))
 
-    def getWebPageDiff(self, user, webPage):
+    def getWebPageDiff(self, username, webPage):
         log.msg('REQUEST: getWebPageDiff')
-        log.msg('Returning: ' + str(self.users.keys()))
+        user = account.UserAccount(username)
+        id = self._getIdForUser(user)
         return defer.succeed(self.cache.getDiffHtml(webPage))
 
-    def getDiff(self, user, webPage):
-        log.msg('REQUEST: getDiff(' + str(user) + ', ' + str(webPage) + ')')
-        log.msg('Returning: ' + str(self.users.keys()))
+    def getDiff(self, username, webPage):
+        log.msg('REQUEST: getDiff(' + str(username) + ', ' + str(webPage) + ')')
+        user = account.UserAccount(username)
+        id = self._getIdForUser(user)
         return defer.succeed(self.cache.getUnifiedDiff(webPage))
+
+    def _getIdForUser(self, user):
+        id = None;
+        for i in range(0, len(self.users)):
+            if self.users[i] == user:
+                id = i
+                break
+        return id
 

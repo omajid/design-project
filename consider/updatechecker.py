@@ -1,12 +1,14 @@
-from consider.settings import Settings
 import xmlrpclib
 import os.path
 import urllib2
 import hashlib
 import difflib
 from subprocess import PIPE, Popen
+
 from PyQt4.QtGui import QDialog, QTextEdit, QHBoxLayout
 from PyQt4.QtCore import QString
+
+from consider.settings import Settings
 
 class UpdateCheckerController:
     def __init__(self, systemTrayIcon = None, settingsModel = None):
