@@ -1,5 +1,5 @@
 from PyQt4.QtCore import SIGNAL, SLOT
-from PyQt4.QtGui import QDialog, QMessageBox
+from PyQt4.QtGui import QDialog, QMessageBox, QDialogButtonBox
 from PyQt4.QtGui import QLabel, QLineEdit, QPushButton
 from PyQt4.QtGui import QGridLayout, QHBoxLayout, QCheckBox
 
@@ -92,7 +92,7 @@ class Settings(designpatterns.Borg):
             server.addWebPage(self.username, unicode(webPage), self.webPages[webPage].getTypes())
 
     def getViewTitle(self):
-        return 'Settings'
+        return 'Settings for ' + self.username
 
     def addObserver(self, observer):
         self.observers.append(observer)
@@ -363,15 +363,13 @@ class SettingsView(QDialog):
         
         row = self.addWebPageListToLayout(layout, row)
 
-        okButton = QPushButton('OK')
-        self.connect(okButton, SIGNAL('clicked()'), self.accept)
-        cancelButton = QPushButton('Cancel')
-        self.connect(cancelButton, SIGNAL('clicked()'), self, SLOT('reject()'))
-        buttonLayout = QHBoxLayout()
-        buttonLayout.addWidget(okButton)
-        buttonLayout.addWidget(cancelButton)
+        buttonBox = QDialogButtonBox(QDialogButtonBox.Ok |
+                QDialogButtonBox.Cancel)
+        buttonBox.button(QDialogButtonBox.Ok).setDefault(True)
 
-        layout.addLayout(buttonLayout, row, 2, spanOneRow, 4)
+        self.connect(buttonBox, SIGNAL('accepted()'), self.accept)
+        self.connect(buttonBox, SIGNAL('rejected()'), self, SLOT('reject()'))
+        layout.addWidget(buttonBox, row, 2, spanOneRow, 4)
 
         self.setLayout(layout) 
 

@@ -1,7 +1,7 @@
 from PyQt4.QtCore import SIGNAL, SLOT, QString
 from PyQt4.QtGui import QMenu, QSystemTrayIcon, QApplication, QDialog, \
         QWidget, QGridLayout, QPushButton, QLineEdit, QLabel, QHBoxLayout, \
-        QIcon
+        QIcon, QDialogButtonBox
 import sys, signal
 
 
@@ -114,6 +114,7 @@ class LoginWindow(QDialog):
     def show(self):
         self.updateUi()
         QDialog.show(self)
+        self.usernameLineEdit.selectAll()
 
     def updateUi(self):
         self.setWindowTitle('Login')
@@ -135,15 +136,12 @@ class LoginWindow(QDialog):
         layout.addWidget(self.passwordLineEdit, row, 1, spanOneRow, spanTwoColumns)
         row = row + 1
 
-        okButton = QPushButton('OK')
-        self.connect(okButton, SIGNAL('clicked()'), self.accept)
-        cancelButton = QPushButton('Cancel')
-        self.connect(cancelButton, SIGNAL('clicked()'), self.reject)
-        buttonLayout = QHBoxLayout()
-        buttonLayout.addWidget(okButton)
-        buttonLayout.addWidget(cancelButton)
+        buttonBox = QDialogButtonBox(QDialogButtonBox.Ok |
+                QDialogButtonBox.Cancel)
+        self.connect(buttonBox, SIGNAL('accepted()'), self.accept)
+        self.connect(buttonBox, SIGNAL('rejected()'), self.reject)
 
-        layout.addLayout(buttonLayout, row, 1)
+        layout.addWidget(buttonBox, row, 1)
         row = row + 1
 
         self.statusLine = QLabel('')

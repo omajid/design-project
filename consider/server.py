@@ -68,7 +68,7 @@ class MonitorService(service.Service):
                     emailNotification.username = 'consider.project@gmail.com'
                     emailNotification.password = ''
                     emailNotification.notify()
-                elif options.NOTIFICATION_TYPE_SMS in notificationTypes:
+                if options.NOTIFICATION_TYPE_SMS in notificationTypes:
                     log.msg('Notifying ' + user.name + ' about ' +
                             str(webPage) + ' through sms')
 
