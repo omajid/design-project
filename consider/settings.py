@@ -1,5 +1,5 @@
 from PyQt4.QtCore import SIGNAL, SLOT
-from PyQt4.QtGui import QDialog 
+from PyQt4.QtGui import QDialog, QMessageBox
 from PyQt4.QtGui import QLabel, QLineEdit, QPushButton
 from PyQt4.QtGui import QGridLayout, QHBoxLayout, QCheckBox
 
@@ -113,10 +113,36 @@ class Settings(designpatterns.Borg):
         return self.webPages
 
     def addWebPage(self, webPage, options):
-        # FIXME webPage.sanitize()
+        '''Add a web page to the model
+
+        raises httplib.InvalidURL if the web page is invalid'''
+
+        webPage = self._cleanURL(webPage)
+
         self.webPages[webPage] = options
         self.saveSettings()
         self._notifyObservers()
+
+    def _cleanURL(self, webPage):
+        '''Cleans ands checks a url for reachability
+
+        raises httplib.InvalidURL on error'''
+        import httplib
+        import socket
+        import urlparse
+
+        webPage = webPage.lower()
+        if not webPage.startswith('http://') and not webPage.startswith('https://'):
+            webPage = 'http://' + webPage
+        url = urlparse.urlparse(webPage)
+
+        try:
+            connection = httplib.HTTPConnection(url.netloc)
+            connection.request('HEAD', url.path)
+            response = connection.getresponse()
+            return webPage
+        except socket.gaierror, e:
+            raise httplib.InvalidURL
 
     def getWebPageOptions(self, webPage):
         return self.webPages[webPage]
@@ -147,10 +173,20 @@ class SettingsView(QDialog):
         self.updateUi()
 
     def addNewWebPage(self):
-        webPage = self.newWebPageLink.text()
+        '''Add a web page to the settings model'''
+        webPage = str(self.newWebPageLink.text())
+        # update the model
         from consider.notifications import options
         notificationOptions = options.NotificationOptions()
-        self.controller.addWebPage(webPage, notificationOptions)
+        import httplib
+        try:
+            self.controller.addWebPage(webPage, notificationOptions)
+        except httplib.InvalidURL, e:
+            msg = QMessageBox.warning(self,
+                    'Invalid URL',
+                    'Unable to retrieve url, please check for typos')
+
+
 
     def removeWebPageBuilder(self, webPage):
         def removeWebPage():
@@ -182,7 +218,7 @@ class SettingsView(QDialog):
 
         webPages = self.model.getWebPages()
 
-        print(str(webPages))
+        print('DEBUG: current web pages: ' + str(webPages))
         row = startingRow
 
         webPageLabel = QLabel('WebPage:')
