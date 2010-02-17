@@ -4,15 +4,15 @@ NOTIFICATION_TYPE_CLIENT = 'client'
 NOTIFICATION_TYPE_SMS = 'sms'
 
 def getClientNotificationOption():
-    notifcation = NotificationOptions([NOTIFICATION_TYPE_CLIENT])
+    notification = NotificationOptions([NOTIFICATION_TYPE_CLIENT])
     return notification
 
 def getEmailNotificationOption():
-    notifcation = NotificationOptions([NOTIFICATION_TYPE_EMAIL])
+    notification = NotificationOptions([NOTIFICATION_TYPE_EMAIL])
     return notification
 
 def getSmsNotificationOption():
-    notifcation = NotificationOptions([NOTIFICATION_TYPE_SMS])
+    notification = NotificationOptions([NOTIFICATION_TYPE_SMS])
     return notification
 
 class NotificationOptions(object):
