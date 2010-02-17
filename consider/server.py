@@ -33,10 +33,10 @@ class MonitorService(service.Service):
 
         MINUTES = 60.0
         self.updater = task.LoopingCall(self.updateCache)
-        self.updater.start(0.5 * MINUTES)
+        self.updater.start(2 * MINUTES)
 
         self.notifier = task.LoopingCall(self.sendNotifications)
-        self.notifier.start(1 * MINUTES)
+        self.notifier.start(4 * MINUTES)
 
     def updateCache(self):
         log.msg("MonitorService.updateCache(): started updating cache...");
