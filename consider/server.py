@@ -52,6 +52,26 @@ class MonitorService(service.Service):
     def sendNotifications(self):
         log.msg("MonitorService.sendNotifications(): Sending out notifications");
 
+        from consider.notifications import options, email, sms
+
+        for user in self.users:
+            for webPage in user.webPages:
+                notificationOptions = user.webPages[webPage]
+                log.msg(str(notificationOptions))
+                notificationTypes = notificationOptions.getTypes()
+                if options.NOTIFICATION_TYPE_EMAIL in notificationTypes:
+                    log.msg('Notifying ' + user.name + ' about ' +
+                            str(webPage) + ' through email ' + str(user.emailAddress))
+                    emailNotification = email.EmailNotification()
+                    emailNotification.setText('This is a test of this program. Please ignore this message')
+                    emailNotification.setDestination([user.emailAddress])
+                    emailNotification.username = 'consider.project@gmail.com'
+                    emailNotification.password = ''
+                    emailNotification.notify()
+                elif options.NOTIFICATION_TYPE_SMS in notificationTypes:
+                    log.msg('Notifying ' + user.name + ' about ' +
+                            str(webPage) + ' through sms')
+
     def getResource(self):
         return rpcservice.XmlRpcUsers(self)
 
@@ -82,6 +102,31 @@ class MonitorService(service.Service):
             del self.users[id]
             log.msg('Removed user')
             return defer.succeed([])
+
+    def setEmailAddress(self, username, emailAddress):
+        log.msg('REQUEST: setEmailAddress(' + str(username) +
+                ', ' + str(emailAddress) + ')')
+        user = account.UserAccount(username)
+        id = self._getIdForUser(user)
+        if id == None:
+            log.msg('No such user')
+            return defer.fail([])
+
+        user = self.users[id]
+        user.emailAddress = emailAddress
+        return defer.succeed([])
+
+    def getEmailAddress(self, username):
+        log.msg('REQUEST: getEmailAddress(' + str(username) + ')')
+        user = account.UserAccount(username)
+        id = self._getIdForUser(user)
+        if id == None:
+            return defer.fail([])
+
+        user = self.users[id]
+        email = user.emailAddress
+        log.msg('Returning: ' + email)
+        return defer.succeed(email)
     
     def getWebPages(self, username):
         log.msg('REQUEST: getWebPages(' + str(username) + ')')

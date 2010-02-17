@@ -9,6 +9,7 @@ from PyQt4.QtGui import QDialog, QTextEdit, QHBoxLayout
 from PyQt4.QtCore import QString
 
 from consider.settings import Settings
+from consider import debug
 
 class UpdateCheckerController:
     def __init__(self, systemTrayIcon = None, settingsModel = None):
@@ -35,12 +36,15 @@ class UpdateCheckerModel:
         import xmlrpclib
         settings = Settings()
         server = xmlrpclib.Server(settings.serverAddress)
-        print('Check for updates')
+        if debug.verbose:
+            print('DEBUG: Check for updates')
         webPages = server.getWebPages(settings.username)
         for webPage in webPages:
-            print('Checking ' + str(webPage))
+            if debug.verbose:
+                print('DEBUG: Checking ' + str(webPage))
             #self.cacheWebsite(webPage)
-        print('Done checking for updates')
+        if debug.verbose:
+            print('DEBUG: Done checking for updates')
         return webPages
 
 
@@ -52,16 +56,19 @@ class UpdateCheckerView:
     def show(self, webPage):
         settings = Settings()
         server = xmlrpclib.Server(settings.serverAddress)
-        print(server.getDiff(settings.username, webPage))
+        if debug.verbose:
+            print('DEBUG: diff from server \n' +  server.getDiff(settings.username, webPage))
         return
         self.notificationDialog = QDialog()
         diffTextEdit = QTextEdit()
         htmlDiff = self._model.getDiffHtml(website)
-        print(htmlDiff)
-        print(type(htmlDiff))
+        if debug.verbose:
+            print(htmlDiff)
+            print(type(htmlDiff))
         diffTextEdit.setHtml(QString(htmlDiff))
         simpleLayout = QHBoxLayout()
         simpleLayout.addWidget(diffTextEdit)
         self.notificationDialog.setLayout(simpleLayout)
-        print('Showing notification dialog')
+        if debug.verbose:
+            print('DEBUG: Showing notification dialog')
         self.notificationDialog.show()

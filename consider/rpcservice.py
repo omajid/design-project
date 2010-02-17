@@ -21,6 +21,11 @@ class XmlRpcUsers(xmlrpc.XMLRPC):
     def xmlrpc_removeUser(self, user):
         return self.service.removeUser(user)
 
+    def xmlrpc_setEmailAddress(self, user, emailAddress):
+        return self.service.setEmailAddress(user, emailAddress)
+    def xmlrpc_getEmailAddress(self, user):
+        return self.service.getEmailAddress(user)
+
     def xmlrpc_getWebPages(self, user):
         return self.service.getWebPages(user)
     def xmlrpc_addWebPage(self, user, webPage, notificationTypes):
