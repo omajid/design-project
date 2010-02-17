@@ -135,6 +135,7 @@ class Settings(designpatterns.Borg):
 class SettingsView(QDialog):
     def __init__(self, controller=None, model=None):
         super(QDialog, self).__init__(None)
+        self.setMinimumWidth(500)
         self.newWebPageName = None
         self.newWebPageLink = None
         self.controller = controller
@@ -184,24 +185,20 @@ class SettingsView(QDialog):
         print(str(webPages))
         row = startingRow
 
-        nameLabel = QLabel('Name')
-        gridLayout.addWidget(nameLabel, row, 0)
         webPageLabel = QLabel('WebPage:')
-        gridLayout.addWidget(webPageLabel, row, 1)
+        gridLayout.addWidget(webPageLabel, row, 0, 1, 4)
 
         clientLabel = QLabel('Client')
-        gridLayout.addWidget(clientLabel, row, 2)
+        gridLayout.addWidget(clientLabel, row, 4)
         emailLabel = QLabel('Email')
-        gridLayout.addWidget(emailLabel, row, 3)
+        gridLayout.addWidget(emailLabel, row, 5)
         smsLabel = QLabel('SMS')
-        gridLayout.addWidget(smsLabel, row, 4)
+        gridLayout.addWidget(smsLabel, row, 6)
 
         for webPage in webPages:
             row = row + 1
-            nameLineEdit = QLineEdit('None')
-            gridLayout.addWidget(nameLineEdit, row, 0)
             linkLineEdit = QLineEdit(webPage)
-            gridLayout.addWidget(linkLineEdit, row, 1)
+            gridLayout.addWidget(linkLineEdit, row, 0, 1, 4)
 
             clientCheck = QCheckBox()
             if options.NOTIFICATION_TYPE_CLIENT in webPages[webPage].getTypes():
@@ -209,7 +206,7 @@ class SettingsView(QDialog):
             self.connect(clientCheck,
                     SIGNAL('stateChanged(int)'),
                     self.checkBoxHandlerBuilder(webPage, options.NOTIFICATION_TYPE_CLIENT))
-            gridLayout.addWidget(clientCheck, row, 2)
+            gridLayout.addWidget(clientCheck, row, 4)
 
             emailCheck = QCheckBox()
             if options.NOTIFICATION_TYPE_EMAIL in webPages[webPage].getTypes():
@@ -217,7 +214,7 @@ class SettingsView(QDialog):
             self.connect(emailCheck,
                     SIGNAL('stateChanged(int)'),
                     self.checkBoxHandlerBuilder(webPage, options.NOTIFICATION_TYPE_EMAIL))
-            gridLayout.addWidget(emailCheck, row, 3)
+            gridLayout.addWidget(emailCheck, row, 5)
 
             smsCheck = QCheckBox()
             if options.NOTIFICATION_TYPE_SMS in webPages[webPage].getTypes():
@@ -225,18 +222,16 @@ class SettingsView(QDialog):
             self.connect(smsCheck,
                     SIGNAL('stateChanged(int)'),
                     self.checkBoxHandlerBuilder(webPage, options.NOTIFICATION_TYPE_SMS))
-            gridLayout.addWidget(smsCheck, row, 4)
+            gridLayout.addWidget(smsCheck, row, 6)
 
             removeButton = QPushButton('Remove')
             self.connect(removeButton, SIGNAL('clicked()'), self.removeWebPageBuilder((webPage)))
-            gridLayout.addWidget(removeButton, row, 5)
+            gridLayout.addWidget(removeButton, row, 7)
         
         # add a blank line for adding new entries
         row = row + 1
-        self.newWebPageName = QLineEdit("<Name>")
-        gridLayout.addWidget(self.newWebPageName, row, 0)
         self.newWebPageLink = QLineEdit("<Location>")
-        gridLayout.addWidget(self.newWebPageLink, row, 1)
+        gridLayout.addWidget(self.newWebPageLink, row, 0, 1, 4)
         # FIXME
         #clientCheck = QCheckBox()
         #gridLayout.addWidget(clientCheck, row, 2)
@@ -247,7 +242,7 @@ class SettingsView(QDialog):
 
         addButton = QPushButton("Add")
         self.connect(addButton, SIGNAL("clicked()"), self.addNewWebPage)
-        gridLayout.addWidget(addButton, row, 5)
+        gridLayout.addWidget(addButton, row, 7)
         return row+1
 
     def deleteLayouts(self, layout=None):
