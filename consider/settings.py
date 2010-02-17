@@ -4,8 +4,9 @@ from PyQt4.QtGui import QLabel, QLineEdit, QPushButton
 from PyQt4.QtGui import QGridLayout, QHBoxLayout, QCheckBox
 
 import xmlrpclib
-from consider import designpatterns
 
+from consider import designpatterns
+from consider.debug import verbose
 
 """ A MVC system for the settings dialog shown to the user
 
@@ -18,6 +19,9 @@ class SettingsController(object):
     def __init__(self):
         self._model = Settings()
         self._view = SettingsView(self, self._model)
+
+    def setEmailAddress(self, emailAddress):
+        self._model.setEmailAddress(emailAddress)
 
     def addWebPage(self, webPage, options):
         self._model.addWebPage(webPage, options)
@@ -50,16 +54,23 @@ class Settings(designpatterns.Borg):
             clientConfiguration = ClientConfiguration()
             self.username = 'test'
             self.password = 'test'
+            self.emailAddress = 'someone@somewhere'
             self.serverAddress = 'http://' + clientConfiguration.getServer()
-            print('Connecting to server: ' + self.serverAddress)
+            if verbose:
+                print('DEBUG: Connecting to server: ' + self.serverAddress)
             self.observers = []
             # { webpage1 : options1, webpage2: options2 }
             self.webPages = {}
+            self.loadSettings
 
     def loadSettings(self):
+        if verbose:
+            print('DEBUG: loading settings from the server')
+
         from consider.notifications import options
 
         server = xmlrpclib.Server(self.serverAddress)
+        self.emailAddress = server.getEmailAddress(self.username)
         pages = server.getWebPages(self.username)
         self.webPages = {}
         # FIXME get the right notification options
@@ -71,8 +82,11 @@ class Settings(designpatterns.Borg):
         self._notifyObservers()
 
     def saveSettings(self):
+        if verbose:
+            print('DEBUG: saving settings to the server')
         server = xmlrpclib.Server(self.serverAddress)
         server.addUser(self.username)
+        server.setEmailAddress(self.username, self.emailAddress)
         # FIXME
         for webPage in self.webPages:
             server.addWebPage(self.username, unicode(webPage), self.webPages[webPage].getTypes())
@@ -91,12 +105,19 @@ class Settings(designpatterns.Borg):
     def getUsername(self):
         return self.username
 
+    def _saveUser(self):
+        if verbose:
+            print('DEBUG: settings username with the server')
+        server = xmlrpclib.Server(self.serverAddress)
+        server.addUser(self.username)
+
     def setUsername(self, username):
         oldUsername = username
         try:
             self.username = username
-            self.saveSettings()
-        except:
+            self._saveUser()
+            self.loadSettings()
+        except IndexError, e:
             self.username = oldUsername
             raise ConnectionError()
         self._notifyObservers()
@@ -108,6 +129,16 @@ class Settings(designpatterns.Borg):
 #        self.password = password
 #        self.saveSettings()
 #        self._notifyObservers()
+
+    def setEmailAddress(self, emailAddress):
+        self.emailAddress = emailAddress
+        if verbose:
+            print('DEBUG: setting email address to: ' + str(self.emailAddress)) 
+        self.saveSettings()
+        self._notifyObservers()
+
+    def getEmailAddress(self):
+        return self.emailAddress
 
     def getWebPages(self):
         return self.webPages
@@ -208,8 +239,14 @@ class SettingsView(QDialog):
                     optionTypes = [type for type in currentNotificationTypes 
                                     if not type == notificationTypeHandled]
                     notificationOptions.setTypes(optionTypes)
-            print('DEBUG: updated options: ' + str(notificationOptions))
+            if verbose:
+                print('DEBUG: updated options: ' + str(notificationOptions))
         return function
+
+    def changeEmailCallback(self):
+        if verbose:
+            print('DEBUG: setting email address to : ' + self.emailLineEdit.text())
+        self.controller.setEmailAddress(str(self.emailLineEdit.text()))
 
     def addWebPageListToLayout(self, gridLayout, startingRow):
         """Returns the next row that can be used in the grid layout"""
@@ -218,7 +255,8 @@ class SettingsView(QDialog):
 
         webPages = self.model.getWebPages()
 
-        print('DEBUG: current web pages: ' + str(webPages))
+        if verbose:
+            print('DEBUG: current web pages: ' + str(webPages))
         row = startingRow
 
         webPageLabel = QLabel('WebPage:')
@@ -314,6 +352,14 @@ class SettingsView(QDialog):
 
         self.setWindowTitle(self.model.getViewTitle())
         layout = QGridLayout()
+
+        emailLabel = QLabel('Email:')
+        layout.addWidget(emailLabel, row, 0)
+        self.emailLineEdit = QLineEdit(self.model.getEmailAddress())
+        self.connect(self.emailLineEdit, SIGNAL('editingFinished()'), self.changeEmailCallback)
+        layout.addWidget(self.emailLineEdit, row, 1, 1, 4)
+
+        row = row + 1
         
         row = self.addWebPageListToLayout(layout, row)
 

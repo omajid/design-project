@@ -4,15 +4,16 @@ from PyQt4.QtGui import QMenu, QSystemTrayIcon, QApplication, QDialog, \
         QIcon
 import sys, signal
 
+
 from consider.settings import SettingsController, Settings, ConnectionError
 from consider.updatechecker import UpdateCheckerController
+from consider import debug
 
-verbose = 0 
 
 def parseArguments(args):
-    global verbose
     if '-v' in args:
-        verbose = 1
+        debug.verbose = 1
+
 
 class ClientApplication():
     """Creates the client application
@@ -48,8 +49,8 @@ class ClientApplication():
             self.updateNotification = updateChecker.showNotificationForWebsite(website)
 
     def _showSettings(self):
-        if verbose:
-            print 'Showing settings (well, not really)'
+        if debug.verbose:
+            print 'DEBUG: Showing settings'
         if self.settingsDialog == None:
             self.settingsDialog = SettingsController()
         self.settingsDialog.show()
@@ -72,8 +73,8 @@ class ClientApplication():
 
     def start(self):
         parseArguments(self.args)
-        if verbose:
-            print 'Starting client...'
+        if debug.verbose:
+            print('DEBUG: Starting client...')
 
         self.application = QApplication(self.args, True)
         self.application.setQuitOnLastWindowClosed(False)
@@ -84,8 +85,8 @@ class ClientApplication():
 
         self.application.exec_()
 
-        if verbose:
-            print 'Stoppping client...'
+        if debug.verbose:
+            print('DEBUG: Stoppping client...')
 
 
 class LoginWindow(QDialog):
