@@ -1,4 +1,4 @@
-from PyQt4.QtCore import SIGNAL, SLOT
+from PyQt4.QtCore import SIGNAL, SLOT, QTimer
 from PyQt4.QtGui import QDialog, QMessageBox, QDialogButtonBox
 from PyQt4.QtGui import QLabel, QLineEdit, QPushButton
 from PyQt4.QtGui import QGridLayout, QHBoxLayout, QCheckBox
@@ -117,7 +117,7 @@ class Settings(designpatterns.Borg):
             self.username = username
             self._saveUser()
             self.loadSettings()
-        except IndexError, e:
+        except socket.gaierror, e:
             self.username = oldUsername
             raise ConnectionError()
         self._notifyObservers()
@@ -134,7 +134,6 @@ class Settings(designpatterns.Borg):
         self.emailAddress = emailAddress
         if verbose:
             print('DEBUG: setting email address to: ' + str(self.emailAddress)) 
-        self.saveSettings()
         self._notifyObservers()
 
     def getEmailAddress(self):
@@ -151,7 +150,6 @@ class Settings(designpatterns.Borg):
         webPage = self._cleanURL(webPage)
 
         self.webPages[webPage] = options
-        self.saveSettings()
         self._notifyObservers()
 
     def _cleanURL(self, webPage):
@@ -186,7 +184,6 @@ class Settings(designpatterns.Borg):
 
     def removeWebPage(self, webPage):
         del self.webPages[webPage]
-        self.saveSettings()
         self._notifyObservers()
 
 class SettingsView(QDialog):
@@ -356,7 +353,8 @@ class SettingsView(QDialog):
         emailLabel = QLabel('Email:')
         layout.addWidget(emailLabel, row, 0)
         self.emailLineEdit = QLineEdit(self.model.getEmailAddress())
-        self.connect(self.emailLineEdit, SIGNAL('editingFinished()'), self.changeEmailCallback)
+        # FIXME this would be a great feature to have
+        #self.connect(self.emailLineEdit, SIGNAL('editingFinished()'), self.changeEmailCallback)
         layout.addWidget(self.emailLineEdit, row, 1, 1, 4)
 
         row = row + 1
@@ -374,13 +372,25 @@ class SettingsView(QDialog):
         self.setLayout(layout) 
 
     def accept(self):
-        self.model.saveSettings()
+        print('DEBUG: ok clicked')
+        # close the dialog, but save settings later
+        QTimer.singleShot(0, self.saveSettings)
         # call QDialog's accept() to close the window
         QDialog.accept(self)
 
+    def saveSettings(self):
+        print('DEBUG: gui triggered saving settings')
+        self.controller.setEmailAddress(str(self.emailLineEdit.text()))
+        self.model.saveSettings()
+
     def reject(self):
-        self.model.loadSettings()
+        print('DEBUG: cancel clicked')
+        timer = QTimer.singleShot(0, self.loadSettings)
         QDialog.reject(self)
+
+    def loadSettings(self):
+        print('DEBUG: gui triggered loading settings')
+        self.model.loadSettings()
 
 class ConnectionError:
     pass
