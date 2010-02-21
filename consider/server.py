@@ -92,12 +92,12 @@ class MonitorService(service.Service):
         return defer.succeed(user)
 
     def removeUser(self, username):
-        log.msg('REQUEST: removeUser(' +  str(removeUser) + ')')
+        log.msg('REQUEST: removeUser(' +  str(username) + ')')
         user = account.UserAccount(username)
         id = self._getIdForUser(user)
         if id == None:
             log.msg('No such user')
-            return defer.fail([])
+            return defer.succeed([])
         else:
             del self.users[id]
             log.msg('Removed user')

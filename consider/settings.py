@@ -85,6 +85,7 @@ class Settings(designpatterns.Borg):
         if verbose:
             print('DEBUG: saving settings to the server')
         server = xmlrpclib.Server(self.serverAddress)
+        server.removeUser(self.username)
         server.addUser(self.username)
         server.setEmailAddress(self.username, self.emailAddress)
         # FIXME
@@ -204,6 +205,7 @@ class SettingsView(QDialog):
         '''Add a web page to the settings model'''
         webPage = str(self.newWebPageLink.text())
         # update the model
+        self.controller.setEmailAddress(str(self.emailLineEdit.text()))
         from consider.notifications import options
         notificationOptions = options.NotificationOptions()
         import httplib
@@ -218,6 +220,7 @@ class SettingsView(QDialog):
 
     def removeWebPageBuilder(self, webPage):
         def removeWebPage():
+            self.controller.setEmailAddress(str(self.emailLineEdit.text()))
             storedWebPage = webPage
             self.controller.removeWebPage(webPage)
         return removeWebPage
@@ -380,7 +383,6 @@ class SettingsView(QDialog):
 
     def saveSettings(self):
         print('DEBUG: gui triggered saving settings')
-        self.controller.setEmailAddress(str(self.emailLineEdit.text()))
         self.model.saveSettings()
 
     def reject(self):
