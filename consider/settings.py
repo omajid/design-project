@@ -1,7 +1,6 @@
-from PyQt4.QtCore import SIGNAL, SLOT, QTimer
-from PyQt4.QtGui import QDialog, QMessageBox, QDialogButtonBox
-from PyQt4.QtGui import QLabel, QLineEdit, QPushButton
-from PyQt4.QtGui import QGridLayout, QHBoxLayout, QCheckBox
+from PyQt4.QtCore import SIGNAL, SLOT, QTimer, Qt
+from PyQt4.QtGui import QDialog, QMessageBox, QDialogButtonBox, QLabel, \
+    QLineEdit, QPushButton, QGridLayout, QHBoxLayout, QCheckBox, QSlider
 
 import xmlrpclib
 
@@ -77,6 +76,7 @@ class Settings(designpatterns.Borg):
         for page in pages:
             notificationOptions = options.NotificationOptions()
             notificationOptions.setTypes(server.getNotificationTypes(self.username, page))
+            notificationOptions.setFrequency(server.getFrequency(self.username, page))
             self.webPages[page] = notificationOptions
         
         self._notifyObservers()
@@ -90,7 +90,7 @@ class Settings(designpatterns.Borg):
         server.setEmailAddress(self.username, self.emailAddress)
         # FIXME
         for webPage in self.webPages:
-            server.addWebPage(self.username, unicode(webPage), self.webPages[webPage].getTypes())
+            server.addWebPage(self.username, unicode(webPage), self.webPages[webPage].getTypes(), self.webPages[webPage].getFrequency())
 
     def getViewTitle(self):
         return 'Settings for ' + self.username
@@ -243,6 +243,12 @@ class SettingsView(QDialog):
                 print('DEBUG: updated options: ' + str(notificationOptions))
         return function
 
+    def sliderChangeBuilder(self, webPage):
+        def function(value):
+            self.controller.getWebPageOptions(webPage).setFrequency(value)
+        return function
+
+
     def changeEmailCallback(self):
         if verbose:
             print('DEBUG: setting email address to : ' + self.emailLineEdit.text())
@@ -268,6 +274,8 @@ class SettingsView(QDialog):
         gridLayout.addWidget(emailLabel, row, 5)
         smsLabel = QLabel('SMS')
         gridLayout.addWidget(smsLabel, row, 6)
+        frequencyLabel = QLabel('Frequency')
+        gridLayout.addWidget(frequencyLabel, row, 7)
 
         for webPage in webPages:
             row = row + 1
@@ -298,9 +306,17 @@ class SettingsView(QDialog):
                     self.checkBoxHandlerBuilder(webPage, options.NOTIFICATION_TYPE_SMS))
             gridLayout.addWidget(smsCheck, row, 6)
 
+            frequencySlider = QSlider(Qt.Horizontal)
+            frequencySlider.setTracking(False)
+            frequencySlider.setMaximum(options.MAX_FREQUENCY)
+            frequencySlider.setMinimum(options.MIN_FREQUENCY)
+            frequencySlider.setValue(webPages[webPage].getFrequency())
+            self.connect(frequencySlider, SIGNAL('valueChanged(int)'), self.sliderChangeBuilder(webPage) )
+            gridLayout.addWidget(frequencySlider, row, 7)
+
             removeButton = QPushButton('Remove')
             self.connect(removeButton, SIGNAL('clicked()'), self.removeWebPageBuilder((webPage)))
-            gridLayout.addWidget(removeButton, row, 7)
+            gridLayout.addWidget(removeButton, row, 10)
         
         # add a blank line for adding new entries
         row = row + 1
@@ -316,7 +332,7 @@ class SettingsView(QDialog):
 
         addButton = QPushButton("Add")
         self.connect(addButton, SIGNAL("clicked()"), self.addNewWebPage)
-        gridLayout.addWidget(addButton, row, 7)
+        gridLayout.addWidget(addButton, row, 10)
         return row+1
 
     def deleteLayouts(self, layout=None):
@@ -358,7 +374,7 @@ class SettingsView(QDialog):
         self.emailLineEdit = QLineEdit(self.model.getEmailAddress())
         # FIXME this would be a great feature to have
         #self.connect(self.emailLineEdit, SIGNAL('editingFinished()'), self.changeEmailCallback)
-        layout.addWidget(self.emailLineEdit, row, 1, 1, 4)
+        layout.addWidget(self.emailLineEdit, row, 1, spanOneRow, 7)
 
         row = row + 1
         
@@ -370,7 +386,7 @@ class SettingsView(QDialog):
 
         self.connect(buttonBox, SIGNAL('accepted()'), self.accept)
         self.connect(buttonBox, SIGNAL('rejected()'), self, SLOT('reject()'))
-        layout.addWidget(buttonBox, row, 2, spanOneRow, 4)
+        layout.addWidget(buttonBox, row, 0, spanOneRow, 11)
 
         self.setLayout(layout) 
 

@@ -140,9 +140,9 @@ class MonitorService(service.Service):
             log.msg('Returning: ' + str(webPages))
             return defer.succeed(webPages)
 
-    def addWebPage(self, username, webPage, notificationTypes):
+    def addWebPage(self, username, webPage, notificationTypes, frequency):
         log.msg('REQUEST: addWebPage(' + str(username) + ', ' + str(webPage) + 
-                ', ' +  str(notificationTypes) + ')')
+                ', ' +  str(notificationTypes) + ', ' + str(frequency) +  ')')
 
         from consider.notifications import options
 
@@ -151,6 +151,7 @@ class MonitorService(service.Service):
         webPages = {}
         notificationOptions = options.NotificationOptions()
         notificationOptions.setTypes(notificationTypes)
+        notificationOptions.setFrequency(frequency)
         if id == None:
             log.msg('Invalid user')
         else:
@@ -190,6 +191,21 @@ class MonitorService(service.Service):
         types = self.users[id].webPages[webPage].getTypes()
         log.msg('Returning: ' + str(types))
         return types
+
+    def getFrequency(self, username, webPage):
+        log.msg('REQUEST: getFrequency(' + str(username) + ', ' + 
+                str(webPage) + ')')
+        user = account.UserAccount(username)
+        id = self._getIdForUser(user)
+        if id == None:
+            return defer.fail('user not found')
+
+        if webPage not in self.users[id].webPages:
+            return defer.fail('web page not found')
+
+        frequency = self.users[id].webPages[webPage].getFrequency()
+        log.msg('Returning ' + str(frequency))
+        return frequency
             
     def getWebPageContent(self, username, webPage):
         log.msg('REQUEST: getWebPageContent(' + str(username) + ', ' + str(webPage) + ')')

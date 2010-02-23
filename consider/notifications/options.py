@@ -2,6 +2,8 @@
 NOTIFICATION_TYPE_EMAIL = 'email'
 NOTIFICATION_TYPE_CLIENT = 'client'
 NOTIFICATION_TYPE_SMS = 'sms'
+MAX_FREQUENCY = 3
+MIN_FREQUENCY = 1
 
 def getClientNotificationOption():
     notification = NotificationOptions([NOTIFICATION_TYPE_CLIENT])
@@ -22,6 +24,7 @@ class NotificationOptions(object):
         types: a list of constants indicating the types of notification
         '''
         self.types = types
+        self.frequency = 0
 
     def __str__(self):
         return 'Notifying using: ' + str(self.types)
@@ -31,3 +34,13 @@ class NotificationOptions(object):
 
     def getTypes(self):
         return self.types
+
+    def getFrequency(self):
+        return self.frequency
+
+    def setFrequency(self, frequency):
+        if frequency < MIN_FREQUENCY:
+            frequency = MIN_FREQUENCY
+        if frequency > MAX_FREQUENCY:
+            frequency = MAX_FREQUENCY
+        self.frequency = frequency
