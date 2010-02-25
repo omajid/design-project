@@ -206,24 +206,30 @@ class MonitorService(service.Service):
         frequency = self.users[id].webPages[webPage].getFrequency()
         log.msg('Returning ' + str(frequency))
         return frequency
-            
-    def getWebPageContent(self, username, webPage):
-        log.msg('REQUEST: getWebPageContent(' + str(username) + ', ' + str(webPage) + ')')
-        user = account.UserAccount(username)
-        id = self._getIdForUser(user)
-        return defer.succeed(self.cache.cacheWebPage(webPage))
 
-    def getWebPageDiff(self, username, webPage):
-        log.msg('REQUEST: getWebPageDiff')
+    def getNewDiff(self, username, webPage):
+        log.msg('REQUEST: getNewDiff(' + str(username) + ', ' + str(webPage) + ')')
         user = account.UserAccount(username)
         id = self._getIdForUser(user)
-        return defer.succeed(self.cache.getDiffHtml(webPage))
-
-    def getDiff(self, username, webPage):
-        log.msg('REQUEST: getDiff(' + str(username) + ', ' + str(webPage) + ')')
-        user = account.UserAccount(username)
-        id = self._getIdForUser(user)
-        return defer.succeed(self.cache.getUnifiedDiff(webPage))
+        user = self.users[id]
+        entries = self.cache.getEntries(webPage)
+        lastSeenEntry = user.webPages[webPage].getLastSeen()
+        log.msg('last seen entry: ' + str(lastSeenEntry))
+        if (lastSeenEntry == None) or (lastSeenEntry == '') or (not lastSeenEntry in entries):
+            log.msg('last seen entry not found, no diff computed')
+            if len(entries) > 0:
+                user.webPages[webPage].setLastSeen(entries[0])
+            return defer.succeed('')
+        if not len(entries) > 1:
+            log.msg('not enough entries cached to compute a diff')
+            return defer.succeed('')
+        # mark the web page as last seen now
+        latestEntry = entries[0]
+        user.webPages[webPage].setLastSeen(latestEntry)
+        if latestEntry == lastSeenEntry:
+            return defer.succeed('')
+        log.msg('getting diff between ' + str(lastSeenEntry) + ' and ' + str(latestEntry))
+        return defer.succeed(self.cache.getContentDiff(webPage, lastSeenEntry, latestEntry))
 
     def _getIdForUser(self, user):
         id = None;

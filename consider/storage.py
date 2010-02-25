@@ -115,8 +115,21 @@ class WebPageCache:
         from twisted.internet import reactor
         reactor.callLater(0, self.cacheWebPage, webPage)
 
-    def getCacheContentsForDiff(self, website):
-        import difflib
+    def getEntries(self, webPage):
+        '''Returns a list of cache entries for this webpage'''
+        cacheLocation = self._getCacheLocation(webPage)
+        entries = os.listdir(cacheLocation)
+        entries.sort(reverse=True)
+        log.msg('WebPageCache.getCacheEntries(): caching entries are ' + str(entries))
+        return entries
+
+    def getContentsForEntry(self, webPage, entry):
+        cacheLocation = self._getCacheLocation(webPage)
+        path = os.path.join(cacheLocation, entry)
+        contents = [ line for line in open(path)]
+        return contents
+
+    def getContentsForDiff(self, website):
         address = website
         cacheLocation = self._getCacheLocation(address)
         log.msg('Diffing:' + cacheLocation)
@@ -131,19 +144,6 @@ class WebPageCache:
         except IndexError:
             # no older file found; no diff
             return ('', '')
-
-    def getUnifiedDiff(self, webPage):
-        import difflib
-        olderFileContents, latestFileContents = self.getCacheContentsForDiff(webPage)
-        return ''.join(difflib.unified_diff(olderFileContents, latestFileContents))
-
-    def getDiffHtml(self, webPage):
-        import difflib
-        olderFileContents, latestFileContents = self.getCacheContentsForDiff(webPage)
-        diff = difflib.HtmlDiff()
-        htmlDiff = diff.make_table(olderFileContents, latestFileContents)
-        log.msg('Finished generating html diff')
-        return htmlDiff
 
     def _extractTextFromHtml(self, content):
         from BeautifulSoup import BeautifulSoup
@@ -191,11 +191,14 @@ class WebPageCache:
         processedOutput = self._extractNewItems(processedOutput)
         return processedOutput
 
-    def getContentDiff(self, webPage):
+    def getContentDiff(self, webPage, olderEntry, newerEntry):
+        '''returns a tuple (content, last entry seen)'''
         import difflib
         from textwrap import TextWrapper
 
-        olderFileContents, latestFileContents = self.getCacheContentsForDiff(webPage)
+        #olderFileContents, latestFileContents = self.getCacheContentsForDiff(webPage)
+        olderFileContents = self.getContentsForEntry(webPage, olderEntry)
+        latestFileContents = self.getContentsForEntry(webPage, newerEntry)
 
         processedOldContent = self._processInputText(olderFileContents)
         processedNewContent = self._processInputText(latestFileContents)

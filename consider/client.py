@@ -1,4 +1,4 @@
-from PyQt4.QtCore import SIGNAL, SLOT, QString
+from PyQt4.QtCore import SIGNAL, SLOT, QString, QTimer
 from PyQt4.QtGui import QMenu, QSystemTrayIcon, QApplication, QDialog, \
         QWidget, QGridLayout, QPushButton, QLineEdit, QLabel, QHBoxLayout, \
         QIcon, QDialogButtonBox
@@ -29,7 +29,7 @@ class ClientApplication():
         menu = QMenu()
         self.forceCheckAction = menu.addAction('Force Check Now')
         self.application.connect(self.forceCheckAction, SIGNAL('triggered()'), \
-                self._checkUpdates)
+                self._forceCheckUpdates)
         self.settingsAction = menu.addAction('Settings')
         self.settingsAction.connect(self.settingsAction, \
                 SIGNAL('triggered()'), self._showSettings)
@@ -42,11 +42,21 @@ class ClientApplication():
         self.settingsDialog = None
         return menu
 
-    def _checkUpdates(self):
-        updateChecker = UpdateCheckerController(self.systemTrayIcon)
-        websites = updateChecker.checkForUpdates()
+    def _forceCheckUpdates(self):
+        if debug.verbose:
+            print('DEBUG: checking for updates forced by user')
+        forced = 1
+        websites = self.updateChecker.checkForUpdates(forced)
         for website in websites:
-            self.updateNotification = updateChecker.showNotificationForWebsite(website)
+            self.updateNotification = self.updateChecker.showNotificationForWebsite(website)
+
+    def automaticCheckForUpdates(self):
+        if debug.verbose:
+            print('DEBUG: Checking for updates')
+        notForced = 0
+        websites = self.updateChecker.checkForUpdates(notForced)
+        for website in websites:
+            self.updateNotification = self.updateChecker.showNotificationForWebsite(website)
 
     def _showSettings(self):
         if debug.verbose:
@@ -70,6 +80,12 @@ class ClientApplication():
         self.systemTrayIcon.setContextMenu(self.systemTrayMenu)
         self.systemTrayIcon.setToolTip('Web Notification Client')
         self.systemTrayIcon.show()
+
+        self.updateChecker = UpdateCheckerController(self.systemTrayIcon)
+
+        self.timer = QTimer()
+        self.application.connect(self.timer, SIGNAL('timeout()'), self.automaticCheckForUpdates)
+        self.timer.start(10 * 1000) # 10 seconds
 
     def start(self):
         parseArguments(self.args)

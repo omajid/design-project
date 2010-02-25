@@ -20,8 +20,8 @@ class UpdateCheckerController:
         self._model = UpdateCheckerModel(settingsModel)
         self._view = UpdateCheckerView(self, self._model)
 
-    def checkForUpdates(self):
-        return self._model.checkForUpdates()
+    def checkForUpdates(self, forced):
+        return self._model.checkForUpdates(forced)
 
     def showNotificationForWebsite(self, website):
         self._view.show(website)
@@ -32,7 +32,7 @@ class UpdateCheckerModel:
         self.cacheLocation = 'cache'
         self.settingsModel = settingsModel
     
-    def checkForUpdates(self):
+    def checkForUpdates(self, forced):
         import xmlrpclib
         settings = Settings()
         server = xmlrpclib.Server(settings.serverAddress)
@@ -42,7 +42,6 @@ class UpdateCheckerModel:
         for webPage in webPages:
             if debug.verbose:
                 print('DEBUG: Checking ' + str(webPage))
-            #self.cacheWebsite(webPage)
         if debug.verbose:
             print('DEBUG: Done checking for updates')
         return webPages
@@ -57,11 +56,11 @@ class UpdateCheckerView:
         settings = Settings()
         server = xmlrpclib.Server(settings.serverAddress)
         if debug.verbose:
-            print('DEBUG: diff from server \n' +  server.getDiff(settings.username, webPage))
+            print('DEBUG: diff from server \n' +  server.getNewDiff(settings.username, webPage))
         return
         self.notificationDialog = QDialog()
         diffTextEdit = QTextEdit()
-        htmlDiff = self._model.getDiffHtml(website)
+        htmlDiff = self._model.getDiffHtml(webPage)
         if debug.verbose:
             print(htmlDiff)
             print(type(htmlDiff))

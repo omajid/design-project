@@ -23,24 +23,34 @@ class NotificationOptions(object):
 
         types: a list of constants indicating the types of notification
         '''
-        self.types = types
-        self.frequency = 0
+        self._types = types
+        self._frequency = 0
+        self._lastSeen = None
 
     def __str__(self):
-        return 'Notifying using: ' + str(self.types)
+        return 'Notifying using: ' + str(self._types)
 
     def setTypes(self, types):
-        self.types = types
+        self._types = types
 
     def getTypes(self):
-        return self.types
+        return self._types
 
     def getFrequency(self):
-        return self.frequency
+        return self._frequency
 
     def setFrequency(self, frequency):
         if frequency < MIN_FREQUENCY:
             frequency = MIN_FREQUENCY
         if frequency > MAX_FREQUENCY:
             frequency = MAX_FREQUENCY
-        self.frequency = frequency
+        self._frequency = frequency
+
+    def getLastSeen(self):
+        '''get the name of the last seen cache entry'''
+        return self._lastSeen
+
+    def setLastSeen(self, lastSeen):
+        '''Set the path of the cache entry that was last seen'''
+        self._lastSeen = lastSeen
+

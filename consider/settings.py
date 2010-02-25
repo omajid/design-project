@@ -3,6 +3,7 @@ from PyQt4.QtGui import QDialog, QMessageBox, QDialogButtonBox, QLabel, \
     QLineEdit, QPushButton, QGridLayout, QHBoxLayout, QCheckBox, QSlider
 
 import xmlrpclib
+import socket
 
 from consider import designpatterns
 from consider.debug import verbose
@@ -31,7 +32,7 @@ class SettingsController(object):
     def getWebPageOptions(self, webPage):
         return self._model.getWebPageOptions(webPage)
 
-    def setWebPageOptions(self, webPage, option):
+    def setWebPageOptions(self, webPage, options):
         self._model.setWebPageOptions(webPage, options)
 
     def getModel(self):
@@ -399,6 +400,7 @@ class SettingsView(QDialog):
 
     def saveSettings(self):
         print('DEBUG: gui triggered saving settings')
+        self.changeEmailCallback()
         self.model.saveSettings()
 
     def reject(self):

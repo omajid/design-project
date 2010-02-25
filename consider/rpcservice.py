@@ -36,9 +36,6 @@ class XmlRpcUsers(xmlrpc.XMLRPC):
         return self.service.getFrequency(user, webPage)
     def xmlrpc_removeWebPage(self, user, webPage):
         return self.service.removeWebPage(user, webPage)
-    def xmlrpc_getWebPageContent(self, user, webPage):
-        return self.service.getWebPageContent(webPage)
-    def xmlrpc_getWebPageDiff(self, user, webPage):
-        return self.servive.getWebPageDiff(self, user, webPage)
-    def xmlrpc_getDiff(self, user, webPage):
-        return self.service.getDiff(user, webPage)
+
+    def xmlrpc_getNewDiff(self, user, webPage):
+        return self.service.getNewDiff(user, webPage)
