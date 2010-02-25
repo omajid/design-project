@@ -145,50 +145,72 @@ class WebPageCache:
         log.msg('Finished generating html diff')
         return htmlDiff
 
-    def getContentDiff(self, webPage):
-        import difflib
+    def _extractTextFromHtml(self, content):
         from BeautifulSoup import BeautifulSoup
-        #import html2text
-
-        olderFileContents, latestFileContents = self.getCacheContentsForDiff(webPage)
-        olderFileContents = ''.join(olderFileContents)
-        latestFileContents = ''.join(latestFileContents)
-
-        newSoup = BeautifulSoup(latestFileContents)
-        oldSoup = BeautifulSoup(olderFileContents)
-
+        
+        soup = BeautifulSoup(''.join(content))
+        
         tagsToStrip = ['script', 'style', 'menu']
         for currentTag in tagsToStrip:
-            section_oldSoup = oldSoup.body.findAll(currentTag)
-            [section_old.extract() for section_old in section_oldSoup]
-            section_newSoup = newSoup.body.findAll(currentTag)
-            [section_new.extract() for section_new in section_newSoup]
-
-        oldSoupText = oldSoup.body(text = True)
-        newSoupText = newSoup.body(text = True)
+            junkTags = soup.body.findAll(currentTag)
+            [junkSection.extract() for junkSection in junkTags]
         
-        ##oldSoupText = html2text.html2text(''.join(olderFileContents))
-        ##newSoupText = html2text.html2text(''.join(latestFileContents))
+        processedContent = soup.body(text = True)
+        return processedContent
 
-        ##TODO: rewrite so that temp files not required
-        ##oldSoupText = ''.join(oldSoupText.encode('utf-8'))
-        ##newSoupText = ''.join(newSoupText.encode('utf-8'))
+    def _removeBlanks(self, content):
+        processedContent = [line.strip() for line in content if len(line.strip()) != 0]
+        return processedContent
 
-        oldSoupText = [line.strip() for line in oldSoupText if len(line.strip()) != 0]
-        newSoupText = [line.strip() for line in newSoupText if len(line.strip()) != 0]
+    def _processInputText(self, content):
+        processedContent = content
+        processedContent = self._extractTextFromHtml(processedContent)
+        processedContent = self._removeBlanks(processedContent)
 
+        return processedContent
+
+    def _extractNewItems(self, content):
+        from textwrap import TextWrapper
+
+        additions = []
+        for line in content:
+            if line[0]=='+':
+                additions += [line[1:]]
+            if line[0]=='@':
+                additions += ['\nNEXT ADDITION\n']
+        
+        wrapper = TextWrapper()
+        wrapper.width = 80
+        wrapper.replace_whitespace = False
+        additions = wrapper.wrap('\n'.join(additions))
+        
+        return additions
+
+    def _processOutputText(self, content):
+        processedOutput = content
+        processedOutput = self._extractNewItems(processedOutput)
+        return processedOutput
+
+    def getContentDiff(self, webPage):
+        import difflib
+        from textwrap import TextWrapper
+
+        olderFileContents, latestFileContents = self.getCacheContentsForDiff(webPage)
+
+        processedOldContent = self._processInputText(olderFileContents)
+        processedNewContent = self._processInputText(latestFileContents)
+
+        #TODO: Remove debug outputs
         fileOldText = open ('oldtext.txt', 'w')
-        fileOldText.write('\n'.join(oldSoupText))
+        fileOldText.write('\n'.join(processedOldContent))
         fileOldText.close()
         fileNewText = open ('newtext.txt', 'w')
-        fileNewText.write('\n'.join(newSoupText))
+        fileNewText.write('\n'.join(processedNewContent))
         fileNewText.close()
 
-        ##newSoupText = [ line for line in open('newtext.txt')]
-        ##oldSoupText = [ line for line in open('oldtext.txt')]
-
-        diff_generator = difflib.unified_diff(oldSoupText, newSoupText, n = 0)
+        diff_generator = difflib.unified_diff(processedOldContent, processedNewContent, n = 0)
         diff = [line for line in diff_generator]
-        diff = '\n'.join(diff)
+        processedDiff = self._processOutputText(diff)
+        processedDiff = '\n'.join(processedDiff)
 
-        return diff
+        return processedDiff
