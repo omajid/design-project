@@ -1,7 +1,6 @@
-from PyQt4.QtCore import SIGNAL, SLOT
-from PyQt4.QtGui import QDialog, QMessageBox
-from PyQt4.QtGui import QLabel, QLineEdit, QPushButton
-from PyQt4.QtGui import QGridLayout, QHBoxLayout, QCheckBox
+from PyQt4.QtCore import SIGNAL, SLOT, QTimer, Qt
+from PyQt4.QtGui import QDialog, QMessageBox, QDialogButtonBox, QLabel, \
+    QLineEdit, QPushButton, QGridLayout, QHBoxLayout, QCheckBox, QSlider
 
 import xmlrpclib
 
@@ -77,6 +76,7 @@ class Settings(designpatterns.Borg):
         for page in pages:
             notificationOptions = options.NotificationOptions()
             notificationOptions.setTypes(server.getNotificationTypes(self.username, page))
+            notificationOptions.setFrequency(server.getFrequency(self.username, page))
             self.webPages[page] = notificationOptions
         
         self._notifyObservers()
@@ -85,14 +85,15 @@ class Settings(designpatterns.Borg):
         if verbose:
             print('DEBUG: saving settings to the server')
         server = xmlrpclib.Server(self.serverAddress)
+        server.removeUser(self.username)
         server.addUser(self.username)
         server.setEmailAddress(self.username, self.emailAddress)
         # FIXME
         for webPage in self.webPages:
-            server.addWebPage(self.username, unicode(webPage), self.webPages[webPage].getTypes())
+            server.addWebPage(self.username, unicode(webPage), self.webPages[webPage].getTypes(), self.webPages[webPage].getFrequency())
 
     def getViewTitle(self):
-        return 'Settings'
+        return 'Settings for ' + self.username
 
     def addObserver(self, observer):
         self.observers.append(observer)
@@ -117,7 +118,7 @@ class Settings(designpatterns.Borg):
             self.username = username
             self._saveUser()
             self.loadSettings()
-        except IndexError, e:
+        except socket.gaierror, e:
             self.username = oldUsername
             raise ConnectionError()
         self._notifyObservers()
@@ -134,7 +135,6 @@ class Settings(designpatterns.Borg):
         self.emailAddress = emailAddress
         if verbose:
             print('DEBUG: setting email address to: ' + str(self.emailAddress)) 
-        self.saveSettings()
         self._notifyObservers()
 
     def getEmailAddress(self):
@@ -151,7 +151,6 @@ class Settings(designpatterns.Borg):
         webPage = self._cleanURL(webPage)
 
         self.webPages[webPage] = options
-        self.saveSettings()
         self._notifyObservers()
 
     def _cleanURL(self, webPage):
@@ -186,7 +185,6 @@ class Settings(designpatterns.Borg):
 
     def removeWebPage(self, webPage):
         del self.webPages[webPage]
-        self.saveSettings()
         self._notifyObservers()
 
 class SettingsView(QDialog):
@@ -207,6 +205,7 @@ class SettingsView(QDialog):
         '''Add a web page to the settings model'''
         webPage = str(self.newWebPageLink.text())
         # update the model
+        self.controller.setEmailAddress(str(self.emailLineEdit.text()))
         from consider.notifications import options
         notificationOptions = options.NotificationOptions()
         import httplib
@@ -221,6 +220,7 @@ class SettingsView(QDialog):
 
     def removeWebPageBuilder(self, webPage):
         def removeWebPage():
+            self.controller.setEmailAddress(str(self.emailLineEdit.text()))
             storedWebPage = webPage
             self.controller.removeWebPage(webPage)
         return removeWebPage
@@ -242,6 +242,12 @@ class SettingsView(QDialog):
             if verbose:
                 print('DEBUG: updated options: ' + str(notificationOptions))
         return function
+
+    def sliderChangeBuilder(self, webPage):
+        def function(value):
+            self.controller.getWebPageOptions(webPage).setFrequency(value)
+        return function
+
 
     def changeEmailCallback(self):
         if verbose:
@@ -268,6 +274,8 @@ class SettingsView(QDialog):
         gridLayout.addWidget(emailLabel, row, 5)
         smsLabel = QLabel('SMS')
         gridLayout.addWidget(smsLabel, row, 6)
+        frequencyLabel = QLabel('Frequency')
+        gridLayout.addWidget(frequencyLabel, row, 7)
 
         for webPage in webPages:
             row = row + 1
@@ -298,9 +306,17 @@ class SettingsView(QDialog):
                     self.checkBoxHandlerBuilder(webPage, options.NOTIFICATION_TYPE_SMS))
             gridLayout.addWidget(smsCheck, row, 6)
 
+            frequencySlider = QSlider(Qt.Horizontal)
+            frequencySlider.setTracking(False)
+            frequencySlider.setMaximum(options.MAX_FREQUENCY)
+            frequencySlider.setMinimum(options.MIN_FREQUENCY)
+            frequencySlider.setValue(webPages[webPage].getFrequency())
+            self.connect(frequencySlider, SIGNAL('valueChanged(int)'), self.sliderChangeBuilder(webPage) )
+            gridLayout.addWidget(frequencySlider, row, 7)
+
             removeButton = QPushButton('Remove')
             self.connect(removeButton, SIGNAL('clicked()'), self.removeWebPageBuilder((webPage)))
-            gridLayout.addWidget(removeButton, row, 7)
+            gridLayout.addWidget(removeButton, row, 10)
         
         # add a blank line for adding new entries
         row = row + 1
@@ -316,7 +332,7 @@ class SettingsView(QDialog):
 
         addButton = QPushButton("Add")
         self.connect(addButton, SIGNAL("clicked()"), self.addNewWebPage)
-        gridLayout.addWidget(addButton, row, 7)
+        gridLayout.addWidget(addButton, row, 10)
         return row+1
 
     def deleteLayouts(self, layout=None):
@@ -356,33 +372,43 @@ class SettingsView(QDialog):
         emailLabel = QLabel('Email:')
         layout.addWidget(emailLabel, row, 0)
         self.emailLineEdit = QLineEdit(self.model.getEmailAddress())
-        self.connect(self.emailLineEdit, SIGNAL('editingFinished()'), self.changeEmailCallback)
-        layout.addWidget(self.emailLineEdit, row, 1, 1, 4)
+        # FIXME this would be a great feature to have
+        #self.connect(self.emailLineEdit, SIGNAL('editingFinished()'), self.changeEmailCallback)
+        layout.addWidget(self.emailLineEdit, row, 1, spanOneRow, 7)
 
         row = row + 1
         
         row = self.addWebPageListToLayout(layout, row)
 
-        okButton = QPushButton('OK')
-        self.connect(okButton, SIGNAL('clicked()'), self.accept)
-        cancelButton = QPushButton('Cancel')
-        self.connect(cancelButton, SIGNAL('clicked()'), self, SLOT('reject()'))
-        buttonLayout = QHBoxLayout()
-        buttonLayout.addWidget(okButton)
-        buttonLayout.addWidget(cancelButton)
+        buttonBox = QDialogButtonBox(QDialogButtonBox.Ok |
+                QDialogButtonBox.Cancel)
+        buttonBox.button(QDialogButtonBox.Ok).setDefault(True)
 
-        layout.addLayout(buttonLayout, row, 2, spanOneRow, 4)
+        self.connect(buttonBox, SIGNAL('accepted()'), self.accept)
+        self.connect(buttonBox, SIGNAL('rejected()'), self, SLOT('reject()'))
+        layout.addWidget(buttonBox, row, 0, spanOneRow, 11)
 
         self.setLayout(layout) 
 
     def accept(self):
-        self.model.saveSettings()
+        print('DEBUG: ok clicked')
+        # close the dialog, but save settings later
+        QTimer.singleShot(0, self.saveSettings)
         # call QDialog's accept() to close the window
         QDialog.accept(self)
 
+    def saveSettings(self):
+        print('DEBUG: gui triggered saving settings')
+        self.model.saveSettings()
+
     def reject(self):
-        self.model.loadSettings()
+        print('DEBUG: cancel clicked')
+        timer = QTimer.singleShot(0, self.loadSettings)
         QDialog.reject(self)
+
+    def loadSettings(self):
+        print('DEBUG: gui triggered loading settings')
+        self.model.loadSettings()
 
 class ConnectionError:
     pass
