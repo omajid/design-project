@@ -52,7 +52,8 @@ class ClientApplication():
         forced = 1
         websites = self.updateChecker.checkForUpdates(forced)
         for website in websites:
-            self.updateNotification = self.updateChecker.showNotificationForWebsite(website)
+            pass
+            #self.updateNotification = self.updateChecker.showNotificationForWebsite(website)
 
     def automaticCheckForUpdates(self):
         if debug.verbose:
@@ -60,7 +61,8 @@ class ClientApplication():
         notForced = 0
         websites = self.updateChecker.checkForUpdates(notForced)
         for website in websites:
-            self.updateNotification = self.updateChecker.showNotificationForWebsite(website)
+            pass
+            #self.updateNotification = self.updateChecker.showNotificationForWebsite(website)
 
     def _showDiffWindow(self):
         if self.diffDialog == None:

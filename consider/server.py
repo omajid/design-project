@@ -58,7 +58,7 @@ class MonitorService(service.Service):
             for webPage in user.webPages:
                 notificationOptions = user.webPages[webPage]
                 log.msg(str(notificationOptions))
-                notificationTypes = notificationOptions.getTypes()
+                notificationTypes = notificationOptions.getNotificationTypes()
                 if options.NOTIFICATION_TYPE_EMAIL in notificationTypes:
                     log.msg('Notifying ' + user.name + ' about ' +
                             str(webPage) + ' through email ' + str(user.emailAddress))
@@ -188,7 +188,7 @@ class MonitorService(service.Service):
         if webPage not in self.users[id].webPages:
             return defer.fail('Web page not found')
 
-        types = self.users[id].webPages[webPage].getTypes()
+        types = self.users[id].webPages[webPage].getNotificationTypes()
         log.msg('Returning: ' + str(types))
         return types
 

@@ -91,7 +91,7 @@ class Settings(designpatterns.Borg):
         server.setEmailAddress(self.username, self.emailAddress)
         # FIXME
         for webPage in self.webPages:
-            server.addWebPage(self.username, unicode(webPage), self.webPages[webPage].getTypes(), self.webPages[webPage].getFrequency())
+            server.addWebPage(self.username, unicode(webPage), self.webPages[webPage].getNotificationTypes(), self.webPages[webPage].getFrequency())
 
     def getViewTitle(self):
         return 'Settings for ' + self.username
@@ -230,7 +230,7 @@ class SettingsView(QDialog):
         def function(checkStatus):
             from consider.notifications import options
             notificationOptions = self.controller.getWebPageOptions(webPage)
-            currentNotificationTypes = notificationOptions.getTypes()
+            currentNotificationTypes = notificationOptions.getNotificationTypes()
             if checkStatus:
                 if not notificationTypeHandled in currentNotificationTypes:
                     currentNotificationTypes.append(notificationTypeHandled)
@@ -284,7 +284,7 @@ class SettingsView(QDialog):
             gridLayout.addWidget(linkLineEdit, row, 0, 1, 4)
 
             clientCheck = QCheckBox()
-            if options.NOTIFICATION_TYPE_CLIENT in webPages[webPage].getTypes():
+            if options.NOTIFICATION_TYPE_CLIENT in webPages[webPage].getNotificationTypes():
                 clientCheck.setChecked(1)
             self.connect(clientCheck,
                     SIGNAL('stateChanged(int)'),
@@ -292,7 +292,7 @@ class SettingsView(QDialog):
             gridLayout.addWidget(clientCheck, row, 4)
 
             emailCheck = QCheckBox()
-            if options.NOTIFICATION_TYPE_EMAIL in webPages[webPage].getTypes():
+            if options.NOTIFICATION_TYPE_EMAIL in webPages[webPage].getNotificationTypes():
                 emailCheck.setChecked(1)
             self.connect(emailCheck,
                     SIGNAL('stateChanged(int)'),
@@ -300,7 +300,7 @@ class SettingsView(QDialog):
             gridLayout.addWidget(emailCheck, row, 5)
 
             smsCheck = QCheckBox()
-            if options.NOTIFICATION_TYPE_SMS in webPages[webPage].getTypes():
+            if options.NOTIFICATION_TYPE_SMS in webPages[webPage].getNotificationTypes():
                 smsCheck.setChecked(1)
             self.connect(smsCheck,
                     SIGNAL('stateChanged(int)'),

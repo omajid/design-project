@@ -30,18 +30,34 @@ class UpdateCheckerController:
 class UpdateCheckerModel:
     def __init__(self, settingsModel = None):
         self.cacheLocation = 'cache'
-        self.settingsModel = settingsModel
+        if settingsModel:
+            self.settings = settingsModel
+        else:
+            self.settings = Settings()
+        # { website : diff }
+        self.diff = {}
     
     def checkForUpdates(self, forced):
-        import xmlrpclib
-        settings = Settings()
-        server = xmlrpclib.Server(settings.serverAddress)
         if debug.verbose:
             print('DEBUG: Check for updates')
-        webPages = server.getWebPages(settings.username)
+
+        self.diff = {}
+
+        import xmlrpclib
+        server = xmlrpclib.Server(self.settings.serverAddress)
+        webPages = self.settings.getWebPages();
+        webPages = [ webPage for webPage in webPages
+                    if 'client' in self.settings.webPages[webPage].getNotificationTypes() ]
         for webPage in webPages:
             if debug.verbose:
                 print('DEBUG: Checking ' + str(webPage))
+            diff = server.getNewDiff(self.settings.username, webPage)
+            if diff == None or diff == '':
+                continue
+            if debug.verbose:
+                print('DEBUG: diff from server \n' +  diff)
+            self.diff[webPage] = diff
+
         if debug.verbose:
             print('DEBUG: Done checking for updates')
         return webPages
@@ -55,9 +71,7 @@ class UpdateCheckerView:
     def show(self, webPage):
         settings = Settings()
         server = xmlrpclib.Server(settings.serverAddress)
-        if debug.verbose:
-            print('DEBUG: diff from server \n' +  server.getNewDiff(settings.username, webPage))
-        return
+
         self.notificationDialog = QDialog()
         diffTextEdit = QTextEdit()
         htmlDiff = self._model.getDiffHtml(webPage)

@@ -33,7 +33,7 @@ class NotificationOptions(object):
     def setTypes(self, types):
         self._types = types
 
-    def getTypes(self):
+    def getNotificationTypes(self):
         return self._types
 
     def getFrequency(self):
