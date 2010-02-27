@@ -1,7 +1,6 @@
 from PyQt4.QtCore import SIGNAL, SLOT, QString, QTimer
 from PyQt4.QtGui import QMenu, QSystemTrayIcon, QApplication, QDialog, \
-        QWidget, QGridLayout, QPushButton, QLineEdit, QLabel, QHBoxLayout, \
-        QIcon, QDialogButtonBox
+        QGridLayout, QLineEdit, QLabel, QIcon, QDialogButtonBox
 import sys, signal
 
 
@@ -50,19 +49,19 @@ class ClientApplication():
         if debug.verbose:
             print('DEBUG: checking for updates forced by user')
         forced = 1
-        websites = self.updateChecker.checkForUpdates(forced)
-        for website in websites:
-            pass
-            #self.updateNotification = self.updateChecker.showNotificationForWebsite(website)
+        self._checkForUpdates(forced);
 
     def automaticCheckForUpdates(self):
         if debug.verbose:
             print('DEBUG: Checking for updates')
         notForced = 0
-        websites = self.updateChecker.checkForUpdates(notForced)
-        for website in websites:
-            pass
-            #self.updateNotification = self.updateChecker.showNotificationForWebsite(website)
+        self._checkForUpdates(notForced);
+
+    def _checkForUpdates(self, forced):
+        webPages = self.updateChecker.checkForUpdates(forced)
+        print('DEBUG: found %s updates' % (len(webPages),))
+        if len(webPages) > 0:
+            self.updateChecker.showNotification(webPages);
 
     def _showDiffWindow(self):
         if self.diffDialog == None:
@@ -92,7 +91,7 @@ class ClientApplication():
         self.systemTrayIcon.setToolTip('Web Notification Client')
         self.systemTrayIcon.show()
 
-        self.updateChecker = UpdateCheckerController(self.systemTrayIcon)
+        self.updateChecker = UpdateCheckerController(self.application, self.systemTrayIcon)
 
         self.timer = QTimer()
         self.application.connect(self.timer, SIGNAL('timeout()'), self.automaticCheckForUpdates)

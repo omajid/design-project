@@ -10,7 +10,6 @@ class UpdateDisplayController:
     def __init__ (self, settingsModel = None, updateChecker = None):
         if settingsModel == None:
             settingsModel = Settings()
-            settingsModel.loadSettings()
         self._model = UpdateDisplayModel(settingsModel, updateChecker)
         self._view = UpdateDisplayView(self._model)
 

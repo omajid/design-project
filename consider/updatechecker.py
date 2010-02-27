@@ -1,30 +1,30 @@
 import xmlrpclib
-import os.path
-import urllib2
-import hashlib
-import difflib
-from subprocess import PIPE, Popen
 
-from PyQt4.QtGui import QDialog, QTextEdit, QHBoxLayout
-from PyQt4.QtCore import QString
+from PyQt4.QtGui import QApplication, QDialog, QTextEdit, QVBoxLayout, QLabel, \
+                        QDialogButtonBox, QPushButton
+from PyQt4.QtCore import QString, SIGNAL, QRect, QTimer
 
 from consider.settings import Settings
 from consider import debug
 
 class UpdateCheckerController:
-    def __init__(self, systemTrayIcon = None, settingsModel = None):
+    '''This class is responsible for controlling the updater and the update notififer '''
+    def __init__(self, application = None, systemTrayIcon = None, settingsModel = None):
         self._systemTrayIcon = systemTrayIcon
+        self._application = application
         if settingsModel == None:
             settingsModel = Settings()
-            settingsModel.loadSettings()
+        self.settings = settingsModel
         self._model = UpdateCheckerModel(settingsModel)
-        self._view = UpdateCheckerView(self, self._model)
+        self._view = UpdateCheckerView(self._application, self, self._model, self._systemTrayIcon)
 
     def checkForUpdates(self, forced):
         return self._model.checkForUpdates(forced)
 
-    def showNotificationForWebsite(self, website):
-        self._view.show(website)
+    def showNotification(self, webPages):
+        if self._view.isVisible():
+            self._view.reject()
+        self._view.show(webPages)
 
     def getWebPageDiff(self, webpage):
         diff = ''
@@ -33,25 +33,26 @@ class UpdateCheckerController:
         return diff
 
 class UpdateCheckerModel:
+    '''Maintains the update model.
+
+    checks for and caches updates recieved from the server'''
     def __init__(self, settingsModel = None):
         self.cacheLocation = 'cache'
         if settingsModel:
             self.settings = settingsModel
         else:
             self.settings = Settings()
-        # { website : diff }
+        # { webPage : diff }
         self.diff = {}
-    
+
     def checkForUpdates(self, forced):
         if debug.verbose:
             print('DEBUG: Check for updates')
 
         self.diff = {}
-        
-        import xmlrpclib
         server = xmlrpclib.Server(self.settings.serverAddress)
         webPages = self.settings.getWebPages();
-        webPages = [ webPage for webPage in webPages
+        webPages = [ webPage for webPage in webPages 
                     if 'client' in self.settings.webPages[webPage].getNotificationTypes() ]
         for webPage in webPages:
             if debug.verbose:
@@ -63,32 +64,71 @@ class UpdateCheckerModel:
                 print('DEBUG: diff from server \n' +  diff)
             self.diff[webPage] = diff
 
-        returnPages = [ webPage for webPage in self.diff]
+        updatedWebPages = [ webPage for webPage in self.diff]
 
         if debug.verbose:
             print('DEBUG: Done checking for updates')
-        return returnPages
+        return updatedWebPages
 
 
-class UpdateCheckerView:
-    def __init__(self, controller, model):
+class UpdateCheckerView(QDialog):
+    '''Displays a small notification indicating new updates have been received'''
+    def __init__(self, application, controller, model, systemTrayIcon):
+        QDialog.__init__(self)
+        self._application = application
         self._controller = controller
         self._model = model 
+        self._systemTrayIcon = systemTrayIcon
+        self.diffDialog = None
 
-    def show(self, webPage):
+    def _truncate(self, string, suffix = '...'):
+        return string
+
+    def show(self, webPages):
         settings = Settings()
         server = xmlrpclib.Server(settings.serverAddress)
 
-        self.notificationDialog = QDialog()
-        diffTextEdit = QTextEdit()
-        htmlDiff = self._model.getDiffHtml(webPage)
-        if debug.verbose:
-            print(htmlDiff)
-            print(type(htmlDiff))
-        diffTextEdit.setHtml(QString(htmlDiff))
-        simpleLayout = QHBoxLayout()
-        simpleLayout.addWidget(diffTextEdit)
-        self.notificationDialog.setLayout(simpleLayout)
+        self.setWindowTitle('updates')
+
+        layout = self.layout()
+        if layout == None:
+            layout = QVBoxLayout()
+
+        label = QLabel('Some Web Pages have changed:')
+        layout.addWidget(label)
+
+        for webPage in webPages:
+            label = QLabel(self._truncate(webPage))
+            layout.addWidget(label)
+
+        #buttonBox = QDialogButtonBox(QDialogButtonBox.Ok)
+        moreButton = QPushButton('More')
+        moreButton.setMaximumWidth(50)
+        self.connect(moreButton, SIGNAL('clicked()'), self.showDiffWindow)
+        layout.addWidget(moreButton)
+
+        self.setLayout(layout)
+
         if debug.verbose:
             print('DEBUG: Showing notification dialog')
-        self.notificationDialog.show()
+        QDialog.show(self)
+
+        QTimer.singleShot(0, self.fixPosition)
+
+    def reject(self):
+        QDialog.reject(self)
+        for widget in self.children():
+            widget.deleteLater()
+        import sip
+        sip.delete(self.layout())
+
+    def showDiffWindow(self):
+        from consider.updatedisplay import UpdateDisplayController
+        if self.diffDialog == None:
+            self.diffDialog = UpdateDisplayController(updateChecker = self._controller)
+        self.diffDialog.show()
+
+    def fixPosition(self):
+        self.move(self._systemTrayIcon.geometry().x(), self._systemTrayIcon.geometry().y() - self.height() - 30)
+        self.raise_()
+        self.update()

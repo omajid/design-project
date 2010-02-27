@@ -159,10 +159,10 @@ class Settings(designpatterns.Borg):
 
         raises httplib.InvalidURL on error'''
         import httplib
-        import socket
         import urlparse
 
         webPage = webPage.lower()
+        print('DEBUG: Settings._cleanURL(): checking url: ' + str(webPage))
         if not webPage.startswith('http://') and not webPage.startswith('https://'):
             webPage = 'http://' + webPage
         url = urlparse.urlparse(webPage)
@@ -228,7 +228,6 @@ class SettingsView(QDialog):
 
     def checkBoxHandlerBuilder(self, webPage, notificationTypeHandled):
         def function(checkStatus):
-            from consider.notifications import options
             notificationOptions = self.controller.getWebPageOptions(webPage)
             currentNotificationTypes = notificationOptions.getNotificationTypes()
             if checkStatus:
@@ -405,7 +404,7 @@ class SettingsView(QDialog):
 
     def reject(self):
         print('DEBUG: cancel clicked')
-        timer = QTimer.singleShot(0, self.loadSettings)
+        QTimer.singleShot(0, self.loadSettings)
         QDialog.reject(self)
 
     def loadSettings(self):

@@ -1,6 +1,5 @@
 import hashlib
 import sqlite3
-import urllib2
 import os.path
 
 from twisted.python import log
