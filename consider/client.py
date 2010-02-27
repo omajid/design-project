@@ -8,7 +8,7 @@ import sys, signal
 from consider.settings import SettingsController, Settings, ConnectionError
 from consider.updatechecker import UpdateCheckerController
 from consider import debug
-
+from consider.updatedisplay import UpdateDisplayController
 
 def parseArguments(args):
     if '-v' in args:
@@ -27,6 +27,9 @@ class ClientApplication():
 
     def _buildMenu(self):
         menu = QMenu()
+        self.diffDisplayAction = menu.addAction('Show Updates')
+        self.application.connect(self.diffDisplayAction, SIGNAL('triggered()'), self._showDiffWindow)
+
         self.forceCheckAction = menu.addAction('Force Check Now')
         self.application.connect(self.forceCheckAction, SIGNAL('triggered()'), \
                 self._forceCheckUpdates)
@@ -40,6 +43,7 @@ class ClientApplication():
         # without a reference/parent it will be destroyed
         # yes, i wasted 5 hours on this!
         self.settingsDialog = None
+        self.diffDialog = None
         return menu
 
     def _forceCheckUpdates(self):
@@ -57,6 +61,11 @@ class ClientApplication():
         websites = self.updateChecker.checkForUpdates(notForced)
         for website in websites:
             self.updateNotification = self.updateChecker.showNotificationForWebsite(website)
+
+    def _showDiffWindow(self):
+        if self.diffDialog == None:
+            self.diffDialog = UpdateDisplayController()
+        self.diffDialog.show()
 
     def _showSettings(self):
         if debug.verbose:
