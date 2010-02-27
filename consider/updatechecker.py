@@ -81,7 +81,9 @@ class UpdateCheckerView(QDialog):
         self._systemTrayIcon = systemTrayIcon
         self.diffDialog = None
 
-    def _truncate(self, string, suffix = '...'):
+    def _truncate(self, string, length = 40, suffix = '...'):
+        if len(string) > length:
+            string = string[:length] + suffix
         return string
 
     def show(self, webPages):
@@ -98,7 +100,8 @@ class UpdateCheckerView(QDialog):
         layout.addWidget(label)
 
         for webPage in webPages:
-            label = QLabel(self._truncate(webPage))
+            label = QLabel('<a href=' + webPage + '>' + self._truncate(webPage) + '</a>' )
+            label.setOpenExternalLinks(True)
             layout.addWidget(label)
 
         #buttonBox = QDialogButtonBox(QDialogButtonBox.Ok)
