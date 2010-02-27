@@ -66,7 +66,7 @@ class ClientApplication():
 
     def _showDiffWindow(self):
         if self.diffDialog == None:
-            self.diffDialog = UpdateDisplayController()
+            self.diffDialog = UpdateDisplayController(updateChecker = self.updateChecker)
         self.diffDialog.show()
 
     def _showSettings(self):

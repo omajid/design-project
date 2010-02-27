@@ -143,7 +143,7 @@ class WebPageCache:
             return (olderFileContents, latestFileContents)
         except IndexError:
             # no older file found; no diff
-            return ('', '')
+            return ([''], [''])
 
     def _extractTextFromHtml(self, content):
         from BeautifulSoup import BeautifulSoup

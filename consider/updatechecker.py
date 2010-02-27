@@ -26,6 +26,11 @@ class UpdateCheckerController:
     def showNotificationForWebsite(self, website):
         self._view.show(website)
 
+    def getWebPageDiff(self, webpage):
+        diff = ''
+        if webpage in self._model.diff:
+            diff = self._model.diff[webpage]
+        return diff
 
 class UpdateCheckerModel:
     def __init__(self, settingsModel = None):
@@ -42,7 +47,7 @@ class UpdateCheckerModel:
             print('DEBUG: Check for updates')
 
         self.diff = {}
-
+        
         import xmlrpclib
         server = xmlrpclib.Server(self.settings.serverAddress)
         webPages = self.settings.getWebPages();
@@ -58,9 +63,11 @@ class UpdateCheckerModel:
                 print('DEBUG: diff from server \n' +  diff)
             self.diff[webPage] = diff
 
+        returnPages = [ webPage for webPage in self.diff]
+
         if debug.verbose:
             print('DEBUG: Done checking for updates')
-        return webPages
+        return returnPages
 
 
 class UpdateCheckerView:
