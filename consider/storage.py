@@ -3,7 +3,7 @@ import sqlite3
 import os.path
 
 from twisted.python import log
-
+from consider import debug
 
 class Settings:
     """ Stores settings for users
@@ -67,6 +67,10 @@ class WebPageCache:
         log.msg('initializing !!! WebPageCache !!!')
         self.cacheLocation = 'cache'
         path = os.path.join('./' + self.cacheLocation)
+        
+        #self.separator = '\nNEXT ADDITION\n'
+        self.separator = '-'*25
+
         try:
             log.msg('WebPageCache.__init__(): creating cache dir: ' + path)
             os.makedirs(path)
@@ -87,6 +91,9 @@ class WebPageCache:
         return location
 
     def cacheWebPage(self, webPage):
+        if debug.noUpdateCache:
+            return
+
         import datetime
         from BeautifulSoup import BeautifulSoup
         from twisted.web.client import downloadPage
@@ -146,14 +153,21 @@ class WebPageCache:
 
     def _extractTextFromHtml(self, content):
         from BeautifulSoup import BeautifulSoup
-        
-        soup = BeautifulSoup(''.join(content))
+       
+        unprocessedSoup = BeautifulSoup(''.join(content))
+
+        soup = BeautifulSoup(unprocessedSoup.prettify())
         
         tagsToStrip = ['script', 'style', 'menu']
         for currentTag in tagsToStrip:
             junkTags = soup.body.findAll(currentTag)
             [junkSection.extract() for junkSection in junkTags]
         
+        stylesToStrip = ['display:none', 'display: none']
+        for currentStyle in stylesToStrip:
+            junk = soup.body.findAll(style=currentStyle)
+            [junkSection.extract() for junkSection in junk]
+
         processedContent = soup.body(text = True)
         return processedContent
 
@@ -172,22 +186,68 @@ class WebPageCache:
         from textwrap import TextWrapper
 
         additions = []
+        skipLines = 0
         for line in content:
+            skipLines = skipLines+1
+            if line[0]=='@':
+                break
+        
+        linesAdded = 0
+        for line in content[skipLines:]:
             if line[0]=='+':
                 additions += [line[1:]]
+                linesAdded += 1
             if line[0]=='@':
-                additions += ['\nNEXT ADDITION\n']
+                if linesAdded:
+                    additions += [self.separator]
+                linesAdded = 0
         
-        wrapper = TextWrapper()
-        wrapper.width = 80
-        wrapper.replace_whitespace = False
-        additions = wrapper.wrap('\n'.join(additions))
+        #wrapper = TextWrapper()
+        #wrapper.width = 80
+        #wrapper.replace_whitespace = False
+        #additions = wrapper.wrap('\n'.join(additions))
         
         return additions
+
+    def _minWordCountFilter(self, content, minCount = 1):
+        #requires _extractNewItems to be run on content before being passed to this function
+
+        firstLineNum = 0
+        currentLineNum = 0
+        changePairs = []
+        separatorLocations = []
+
+        for line in content:
+            if line == self.separator:
+                changePairs += [[firstLineNum, currentLineNum]]
+                firstLineNum = currentLineNum + 1
+            currentLineNum += 1
+        changePairs += [[firstLineNum, currentLineNum]]
+        changePairs.reverse()
+
+        filteredResult = content
+        filteredResult += [self.separator]
+        for pair in changePairs:
+            currentAdd = ' '.join(filteredResult[pair[0]:pair[1]])
+            numWords = len(currentAdd.split())
+            print (numWords)
+            if numWords < minCount:
+                lineRange = range(pair[0], pair[1]+1)
+                lineRange.reverse()
+                for lineToRemove in lineRange:
+                    filteredResult.pop(lineToRemove)
+
+        lastLine = filteredResult.pop()
+        if lastLine != self.separator :
+            filteredResult += lastLine
+
+        return filteredResult
+
 
     def _processOutputText(self, content):
         processedOutput = content
         processedOutput = self._extractNewItems(processedOutput)
+        processedOutput = self._minWordCountFilter(processedOutput, 2)
         return processedOutput
 
     def getContentDiff(self, webPage, olderEntry, newerEntry):
