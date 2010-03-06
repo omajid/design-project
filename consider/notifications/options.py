@@ -1,3 +1,4 @@
+import exceptions
 
 NOTIFICATION_TYPE_EMAIL = 'email'
 NOTIFICATION_TYPE_CLIENT = 'client'
@@ -18,14 +19,14 @@ def getSmsNotificationOption():
     return notification
 
 class NotificationOptions(object):
-    def __init__(self, types = []):
+    def __init__(self, types = [], lastSeen = {}):
         '''
 
         types: a list of constants indicating the types of notification
         '''
         self._types = types
         self._frequency = 0
-        self._lastSeen = None
+        self._lastSeen = lastSeen
 
     def __str__(self):
         return 'Notifying using: ' + str(self._types)
@@ -46,11 +47,14 @@ class NotificationOptions(object):
             frequency = MAX_FREQUENCY
         self._frequency = frequency
 
-    def getLastSeen(self):
-        '''get the name of the last seen cache entry'''
-        return self._lastSeen
+    def getLastSeen(self, type):
+        '''get the name of the last seen cache entry for some type of notification'''
+        try:
+            return self._lastSeen[type]
+        except exceptions.KeyError, e:
+            return None
 
-    def setLastSeen(self, lastSeen):
-        '''Set the path of the cache entry that was last seen'''
-        self._lastSeen = lastSeen
+    def setLastSeen(self, type, lastSeen):
+        '''set the name of the last seen cache entry for the type of notification'''
+        self._lastSeen[type] = lastSeen
 
