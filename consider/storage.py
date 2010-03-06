@@ -4,8 +4,10 @@ import os.path
 
 from twisted.python import log
 
+from consider import debug
+from consider.notifications import options
 
-class Settings:
+class UserSettingsStorage:
     """ Stores settings for users
 
     """
@@ -13,49 +15,108 @@ class Settings:
     def __init__(self):
         self.__data = []
         self.userSettingsDatabase = 'user.settings'
+        self._userTable = 'users'
+        self._webPagesTable = 'webpages'
 
     # FIXME switch to twisted's async db api
-    def store(self):
+    def store(self, users):
+        '''store information on users in a database'''
 
         connection = sqlite3.connect(self.userSettingsDatabase)
         cursor = connection.cursor()
-        print('Clearing previous entries')
+        log.msg('UserSettingsStorage.store(): Clearing previous entries')
         try:
-            cursor.execute('''DROP TABLE Websites''')
-        except:
-            print('Error clearing previous entries')
+            cursor.execute('DROP TABLE ' + self._webPagesTable)
+        except sqlite3.OperationalError:
+            log.msg('Error clearing previous entries')
 
-        print('Creating table')
+        log.msg('UserSettingsStorage.store(): Creating users table')
         try:
-            cursor.execute('''CREATE TABLE Websites 
+            cursor.execute('''CREATE TABLE ''' + self._userTable + ''' 
                 (id INTEGER PRIMARY KEY ASC,
                 user TEXT,
-                url TEXT
+                password TEXT,
+                email TEXT
                 )''')
         except sqlite3.OperationalError:
-            print('Table already exists')
-        connection.commit()
+            log.msg('UserSettingsStorage.store(): Table already exists')
 
-        print('Storing entries')
-        for user, webPage in self.data:
-            print(str(webPage))
-            t = (unicode(user), unicode(webPage))
-            cursor.execute('INSERT INTO Websites (id, user, url) VALUES (NULL, ?, ?)', t)
-        connection.commit()
-        cursor.close()
+        log.msg('UserSettingsStorage.store(): Creating webpages table')
+        try:
+            cursor.execute('''CREATE TABLE ''' + self._webPagesTable + ''' 
+                (id INTEGER PRIMARY KEY ASC,
+                userId INTEGER,
+                webPage TEXT,
+                notifyClient INTEGER,
+                notifyEmail INTEGER,
+                notifySms INTEGER,
+                frequency INTEGER
+                )''')
+        except sqlite3.OperationalError:
+            log.msg('UserSettingsStorage.store(): Table already exists')
+
+        log.msg('UserSettingsStorage.store(): Storing entries')
+        try:
+            for user in users:
+                t = (unicode(user.name), unicode(user.password), user.emailAddress)
+                cursor.execute('INSERT INTO ' + self._userTable + ' (id, user, password, email) VALUES (NULL, ?, ?, ?)', t)
+                t = (unicode(user.name),)
+                result = cursor.execute('SELECT * FROM ' + self._userTable + ' WHERE user=?', t)
+                userId = result.fetchone()[0]
+                for webPage in user.webPages:
+                    notificationOptions = user.webPages[webPage]
+                    notifyClient = options.NOTIFICATION_TYPE_CLIENT in notificationOptions.getNotificationTypes()
+                    notifyEmail = options.NOTIFICATION_TYPE_EMAIL in notificationOptions.getNotificationTypes()
+                    notifySms = options.NOTIFICATION_TYPE_SMS in notificationOptions.getNotificationTypes()
+                    t = (userId, unicode(webPage), notifyClient, notifyEmail, notifySms, notificationOptions.getFrequency())
+                    cursor.execute('INSERT INTO ' + self._webPagesTable + ' ' +
+                            '(id, userId, webPage, notifyClient, notifyEmail, notifySms, frequency)' + 
+                            ' ' + 'VALUES (NULL, ?, ?, ?, ?, ?, ?)', t)
+            connection.commit()
+            log.msg('UserSettingsStorage.store(): all user settings saved')
+        except sqlite3.OperationalError, e:
+            log.msg('UserSettingsStorage.store(): error saving user settings' + str(e))
+        finally:
+            cursor.close()
 
     def load(self):
+        ''' returns a list of user objects ready to be used'''
+
+        from consider import account
+
         connection = sqlite3.connect(self.userSettingsDatabase)
+        users = []
         try:
             cursor = connection.cursor()
-            print('Reading database')
-            rows = cursor.execute('''SELECT user, link FROM Websites''')
-            for row in rows:
-                webPage = row[1]
-                user = row[0]
-                self.data.append((user, webPage))
-        except:
-            print('Error reading database')
+            log.msg('UserSettingsStorage.store(): Reading database')
+            rows = cursor.execute('SELECT * FROM ' + self._userTable)
+            for row in rows: 
+                # (id, user, password, email)
+                user = account.UserAccount()
+                userId = row[0]
+                user.name = row[1]
+                user.password = row[2]
+                user.emailAddress = row[3]
+
+                webPageRows = cursor.execute('SELECT * FROM ' + self._webPagesTable + ' WHERE userId=?', (userId,))
+                for webPageRow in webPageRows:
+                    # (id, userId, webPage, notifyClient, notifyEmail, notifySms, frequency)
+                    notificationOptions = options.NotificationOptions()
+                    notificationTypes = []
+                    webPage = webPageRow[2]
+                    if (webPageRow[3] != 0):
+                        notificationTypes.append(options.NOTIFICATION_TYPE_CLIENT)
+                    if (webPageRow[4] != 0):
+                        notificationTypes.append(options.NOTIFICATION_TYPE_EMAIL)
+                    if (webPageRow[5] != 0):
+                        notificationTypes.append(options.NOTIFICATION_TYPE_SMS)
+                    notificationOptions.setTypes(notificationTypes)
+                    notificationOptions.setFrequency(webPageRow[6])
+                    user.webPages[webPage] = notificationOptions
+            users.append(user)
+        except sqlite3.OperationalError, e:
+            log.msg('UserSettingsStorage.store(): Error reading database: ' + str(e))
+        return users
 
 
 class WebPageCache:
@@ -94,7 +155,7 @@ class WebPageCache:
         log.msg('WebPageCache.cacheWebPage(): caching webPage' + str(webPage))
         #data = urllib2.urlopen(webPage)
         cacheLocation = str(self._getCacheLocation(webPage))
-        print('Cache location for ' + webPage + ' is ' + cacheLocation)
+        log.msg('Cache location for ' + webPage + ' is ' + cacheLocation)
         if not os.path.isdir(cacheLocation):
             dir = os.makedirs(cacheLocation)
         cacheLocation = os.path.join(cacheLocation, str(datetime.datetime.now().isoformat()))
@@ -202,13 +263,13 @@ class WebPageCache:
         processedOldContent = self._processInputText(olderFileContents)
         processedNewContent = self._processInputText(latestFileContents)
 
-        #TODO: Remove debug outputs
-        fileOldText = open ('oldtext.txt', 'w')
-        fileOldText.write('\n'.join(processedOldContent))
-        fileOldText.close()
-        fileNewText = open ('newtext.txt', 'w')
-        fileNewText.write('\n'.join(processedNewContent))
-        fileNewText.close()
+        if debug.verbose:
+            fileOldText = open ('oldtext.txt', 'w')
+            fileOldText.write('\n'.join(processedOldContent))
+            fileOldText.close()
+            fileNewText = open ('newtext.txt', 'w')
+            fileNewText.write('\n'.join(processedNewContent))
+            fileNewText.close()
 
         diff_generator = difflib.unified_diff(processedOldContent, processedNewContent, n = 0)
         diff = [line for line in diff_generator]

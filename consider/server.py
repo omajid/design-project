@@ -12,6 +12,7 @@ class MasterService(service.MultiService):
         serverConfig = configuration.ServerConfiguration()
         self.rpcServerPort = serverConfig.getPort()
         self.monitorService = MonitorService()
+        self.monitorService.setServiceParent(self)
         self.rpcServer = internet.TCPServer(
                             self.rpcServerPort, 
                             server.Site(self.monitorService.getResource()))
@@ -29,13 +30,23 @@ class MonitorService(service.Service):
 
         self.users = []
         self.cache = storage.WebPageCache()
+        self.storage = storage.UserSettingsStorage()
 
+
+    def startService(self):
         MINUTES = 60.0
         self.updater = task.LoopingCall(self.updateCache)
         self.updater.start(0.5 * MINUTES)
 
         self.notifier = task.LoopingCall(self.sendNotifications)
         self.notifier.start(1 * MINUTES)
+
+        self.users = self.storage.load()
+
+    def stopService(self):
+        log.msg('MonitorService.stopServie(): saving user settings to database')
+        self.storage.store(self.users)
+        return service.Service.stopService(self)
 
     def updateCache(self):
         log.msg("MonitorService.updateCache(): started updating cache...");
@@ -64,6 +75,9 @@ class MonitorService(service.Service):
             emailNotification.password = str('PASSWORD_HERE')
             emailNotification.notify()
 
+    def _sendEmailError(self):
+        log.msg('MonitorService._sendEmailError(): Error generating diff')
+
     def sendNotifications(self):
         log.msg("MonitorService.sendNotifications(): Sending out notifications");
 
@@ -77,6 +91,7 @@ class MonitorService(service.Service):
                 diff = self.getNewDiff(user.name, webPage, options.NOTIFICATION_TYPE_EMAIL)
                 if options.NOTIFICATION_TYPE_CLIENT in notificationTypes:
                     diff.addCallback(self._sendEmail, args=[user, webPage])
+                    diff.addErrback(self._sendEmailError))
                 if options.NOTIFICATION_TYPE_SMS in notificationTypes:
                     log.msg('Notifying ' + user.name + ' about ' +
                             str(webPage) + ' through sms')
