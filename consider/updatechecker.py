@@ -16,12 +16,13 @@ class UpdateCheckerController:
             settingsModel = Settings()
         self.settings = settingsModel
         self._model = UpdateCheckerModel(settingsModel)
-        self._view = UpdateCheckerView(self._application, self, self._model, self._systemTrayIcon)
+        self._view = None
 
     def checkForUpdates(self, forced):
         return self._model.checkForUpdates(forced)
 
     def showNotification(self, webPages):
+        self._view = UpdateCheckerView(self._application, self, self._model, self._systemTrayIcon)
         if self._view.isVisible():
             self._view.reject()
         self._view.show(webPages)
@@ -73,13 +74,14 @@ class UpdateCheckerModel:
 
 class UpdateCheckerView(QDialog):
     '''Displays a small notification indicating new updates have been received'''
-    def __init__(self, application, controller, model, systemTrayIcon):
+    def __init__(self, application, controller, model, systemTrayIcon, timeout = 10000):
         QDialog.__init__(self)
         self._application = application
         self._controller = controller
         self._model = model 
         self._systemTrayIcon = systemTrayIcon
         self.diffDialog = None
+        self._timeout = timeout
 
     def _truncate(self, string, length = 40, suffix = '...'):
         if len(string) > length:
@@ -105,8 +107,8 @@ class UpdateCheckerView(QDialog):
             layout.addWidget(label)
 
         #buttonBox = QDialogButtonBox(QDialogButtonBox.Ok)
-        moreButton = QPushButton('More')
-        moreButton.setMaximumWidth(50)
+        moreButton = QPushButton('More...')
+        moreButton.setMaximumWidth(60)
         self.connect(moreButton, SIGNAL('clicked()'), self.showDiffWindow)
         layout.addWidget(moreButton)
 
@@ -117,6 +119,7 @@ class UpdateCheckerView(QDialog):
         QDialog.show(self)
 
         QTimer.singleShot(0, self.fixPosition)
+        QTimer.singleShot(self._timeout, self.hide)
 
     def reject(self):
         QDialog.reject(self)
