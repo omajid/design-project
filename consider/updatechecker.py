@@ -53,7 +53,9 @@ class UpdateCheckerModel:
         if debug.verbose:
             print('DEBUG: Check for updates')
 
+        oldDiff = self.diff
         self.diff = {}
+
         server = xmlrpclib.Server(self.settings.serverAddress)
         webPages = self.settings.getWebPages();
         webPagesToCheck = [ webPage for webPage in webPages
@@ -82,6 +84,12 @@ class UpdateCheckerModel:
             self.diff[webPage] = diff
 
         updatedWebPages = [ webPage for webPage in self.diff]
+
+        # keep the older entries, but replace the newer entries 
+        newDiff = self.diff
+        self.diff = oldDiff
+        for webPage in newDiff:
+            self.diff[webPage] = newDiff[webPage]
 
         if debug.verbose:
             print('DEBUG: Done checking for updates')
