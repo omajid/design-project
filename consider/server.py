@@ -12,6 +12,7 @@ class MasterService(service.MultiService):
         serverConfig = configuration.ServerConfiguration()
         self.rpcServerPort = serverConfig.getPort()
         self.monitorService = MonitorService()
+        self.monitorService.setServiceParent(self)
         self.rpcServer = internet.TCPServer(
                             self.rpcServerPort, 
                             server.Site(self.monitorService.getResource()))
@@ -29,13 +30,23 @@ class MonitorService(service.Service):
 
         self.users = []
         self.cache = storage.WebPageCache()
+        self.storage = storage.UserSettingsStorage()
 
+
+    def startService(self):
         MINUTES = 60.0
         self.updater = task.LoopingCall(self.updateCache)
         self.updater.start(0.5 * MINUTES)
 
         self.notifier = task.LoopingCall(self.sendNotifications)
         self.notifier.start(1 * MINUTES)
+
+        self.users = self.storage.load()
+
+    def stopService(self):
+        log.msg('MonitorService.stopServie(): saving user settings to database')
+        self.storage.store(self.users)
+        return service.Service.stopService(self)
 
     def updateCache(self):
         log.msg("MonitorService.updateCache(): started updating cache...");
@@ -49,25 +60,38 @@ class MonitorService(service.Service):
         for webPage in listOfUniqueWebPages:
             self.cache.startCaching(webPage)
 
+    def _sendEmail(self, diff, args=None):
+        from consider.notifications import email
+
+        user = args[0]
+        webPage = args[1]
+        if str(diff).strip() != '':
+            log.msg('Notifying ' + user.name + ' about ' +
+                    str(webPage) + ' through email ' + str(user.emailAddress))
+            emailNotification = email.EmailNotification()
+            emailNotification.setText(str(diff))
+            emailNotification.setDestination([str(user.emailAddress)])
+            emailNotification.username = str('consider.project@gmail.com')
+            emailNotification.password = str('PASSWORD_HERE')
+            emailNotification.notify()
+
+    def _sendEmailError(self):
+        log.msg('MonitorService._sendEmailError(): Error generating diff')
+
     def sendNotifications(self):
         log.msg("MonitorService.sendNotifications(): Sending out notifications");
 
-        from consider.notifications import options, email, sms
+        from consider.notifications import options
 
         for user in self.users:
             for webPage in user.webPages:
                 notificationOptions = user.webPages[webPage]
                 log.msg(str(notificationOptions))
                 notificationTypes = notificationOptions.getNotificationTypes()
-                if options.NOTIFICATION_TYPE_EMAIL in notificationTypes:
-                    log.msg('Notifying ' + user.name + ' about ' +
-                            str(webPage) + ' through email ' + str(user.emailAddress))
-                    emailNotification = email.EmailNotification()
-                    emailNotification.setText('This is a test of this program. Please ignore this message')
-                    emailNotification.setDestination([user.emailAddress])
-                    emailNotification.username = 'consider.project@gmail.com'
-                    emailNotification.password = ''
-                    emailNotification.notify()
+                diff = self.getNewDiff(user.name, webPage, options.NOTIFICATION_TYPE_EMAIL)
+                if options.NOTIFICATION_TYPE_CLIENT in notificationTypes:
+                    diff.addCallback(self._sendEmail, args=[user, webPage])
+                    diff.addErrback(self._sendEmailError))
                 if options.NOTIFICATION_TYPE_SMS in notificationTypes:
                     log.msg('Notifying ' + user.name + ' about ' +
                             str(webPage) + ' through sms')
@@ -207,25 +231,36 @@ class MonitorService(service.Service):
         log.msg('Returning ' + str(frequency))
         return frequency
 
-    def getNewDiff(self, username, webPage):
-        log.msg('REQUEST: getNewDiff(' + str(username) + ', ' + str(webPage) + ')')
+    def getNewDiff(self, username, webPage, notificationType = None):
+        '''generate and return the diff for the last seen cache entries
+
+        for user with username, find the last cache entry seen through CLIENT 
+        notifications, and create a diff with the lastest entry
+        '''
+        from consider.notifications.options import NOTIFICATION_TYPE_CLIENT
+        if notificationType == None:
+            notificationType = NOTIFICATION_TYPE_CLIENT
+        log.msg('REQUEST: getNewDiff(' + str(username) + ', ' + str(webPage) + 
+                ', ' + str(notificationType) + ')')
         user = account.UserAccount(username)
         id = self._getIdForUser(user)
+        if id == None:
+            return defer.fail('no user found')
         user = self.users[id]
         entries = self.cache.getEntries(webPage)
-        lastSeenEntry = user.webPages[webPage].getLastSeen()
-        log.msg('last seen entry: ' + str(lastSeenEntry))
+        lastSeenEntry = user.webPages[webPage].getLastSeen(notificationType)
+        log.msg('last seen entry for ' + str(notificationType) + ' notification : ' + str(lastSeenEntry))
         if (lastSeenEntry == None) or (lastSeenEntry == '') or (not lastSeenEntry in entries):
             log.msg('last seen entry not found, no diff computed')
             if len(entries) > 0:
-                user.webPages[webPage].setLastSeen(entries[0])
+                user.webPages[webPage].setLastSeen(notificationType, entries[0])
             return defer.succeed('')
         if not len(entries) > 1:
             log.msg('not enough entries cached to compute a diff')
             return defer.succeed('')
         # mark the web page as last seen now
         latestEntry = entries[0]
-        user.webPages[webPage].setLastSeen(latestEntry)
+        user.webPages[webPage].setLastSeen(notificationType, latestEntry)
         if latestEntry == lastSeenEntry:
             return defer.succeed('')
         log.msg('getting diff between ' + str(lastSeenEntry) + ' and ' + str(latestEntry))
