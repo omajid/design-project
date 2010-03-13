@@ -273,6 +273,9 @@ class WebPageCache:
     def _minWordCountFilter(self, content, minCount = 1):
         #requires _extractNewItems to be run on content before being passed to this function
 
+        if not content:
+            return content
+
         firstLineNum = 0
         currentLineNum = 0
         changePairs = []
@@ -304,15 +307,15 @@ class WebPageCache:
 
         return filteredResult
 
-
-    def _processOutputText(self, content):
+    def _processOutputText(self, content, wcThreshold):
         processedOutput = content
         processedOutput = self._extractNewItems(processedOutput)
-        processedOutput = self._minWordCountFilter(processedOutput, 2)
+        processedOutput = self._minWordCountFilter(processedOutput, wcThreshold)
         return processedOutput
 
-    def getContentDiff(self, webPage, olderEntry, newerEntry):
+    def getContentDiff(self, webPage, olderEntry, newerEntry, wcThreshold):
         '''returns a tuple (content, last entry seen)'''
+        
         import difflib
         from textwrap import TextWrapper
 
@@ -333,7 +336,7 @@ class WebPageCache:
 
         diff_generator = difflib.unified_diff(processedOldContent, processedNewContent, n = 0)
         diff = [line for line in diff_generator]
-        processedDiff = self._processOutputText(diff)
+        processedDiff = self._processOutputText(diff, wcThreshold)
         processedDiff = '\n'.join(processedDiff)
 
         return processedDiff
