@@ -5,6 +5,8 @@ NOTIFICATION_TYPE_CLIENT = 'client'
 NOTIFICATION_TYPE_SMS = 'sms'
 MAX_FREQUENCY = 3
 MIN_FREQUENCY = 1
+MIN_WC_THRESHOLD = 0
+MAX_WC_THRESHOLD = 50
 
 def getDelayForFrequency(frequency):
     '''Returns the delay in seconds that the frequency corresponds to'''
@@ -41,6 +43,7 @@ class NotificationOptions(object):
         self._frequency = MIN_FREQUENCY
         self._lastSeenEntry = lastSeenEntry
         self._lastSeenTimestamp = lastSeenTimestamp
+        self._wcThreshold = MIN_WC_THRESHOLD
 
     def __str__(self):
         return 'Notifying using: ' + str(self._types)
@@ -60,6 +63,16 @@ class NotificationOptions(object):
         if frequency > MAX_FREQUENCY:
             frequency = MAX_FREQUENCY
         self._frequency = frequency
+
+    def getWCThreshold(self):
+        return self._wcThreshold
+
+    def setWCThreshold(self, minCount):
+        if minCount < MIN_WC_THRESHOLD:
+            minCount = MIN_WC_THRESHOLD
+        elif minCount > MAX_WC_THRESHOLD:
+            minCount = MAX_WC_THRESHOLD
+        self._wcThreshold = minCount
 
     def getLastSeenEntry(self, type):
         '''get the name of the last seen cache entry for some type of notification'''

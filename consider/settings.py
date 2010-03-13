@@ -1,6 +1,7 @@
 from PyQt4.QtCore import SIGNAL, SLOT, QTimer, Qt
 from PyQt4.QtGui import QDialog, QMessageBox, QDialogButtonBox, QLabel, \
-    QLineEdit, QPushButton, QGridLayout, QHBoxLayout, QCheckBox, QSlider
+    QLineEdit, QPushButton, QGridLayout, QHBoxLayout, QCheckBox, QSlider, \
+    QSpinBox
 
 import xmlrpclib
 import socket
@@ -91,7 +92,7 @@ class Settings(designpatterns.Borg):
         server.setEmailAddress(self.username, self.emailAddress)
         # FIXME
         for webPage in self.webPages:
-            server.addWebPage(self.username, unicode(webPage), self.webPages[webPage].getNotificationTypes(), self.webPages[webPage].getFrequency())
+            server.addWebPage(self.username, unicode(webPage), self.webPages[webPage].getNotificationTypes(), self.webPages[webPage].getFrequency(), self.webPages[webPage].getWCThreshold())
 
     def getViewTitle(self):
         return 'Settings for ' + self.username
@@ -217,8 +218,6 @@ class SettingsView(QDialog):
                     'Invalid URL',
                     'Unable to retrieve url, please check for typos')
 
-
-
     def removeWebPageBuilder(self, webPage):
         def removeWebPage():
             self.controller.setEmailAddress(str(self.emailLineEdit.text()))
@@ -248,6 +247,10 @@ class SettingsView(QDialog):
             self.controller.getWebPageOptions(webPage).setFrequency(value)
         return function
 
+    def spinboxChangeBuilder(self, webPage):
+        def function(value):
+            self.controller.getWebPageOptions(webPage).setWCThreshold(value)
+        return function
 
     def changeEmailCallback(self):
         if verbose:
@@ -276,6 +279,8 @@ class SettingsView(QDialog):
         gridLayout.addWidget(smsLabel, row, 6)
         frequencyLabel = QLabel('Frequency')
         gridLayout.addWidget(frequencyLabel, row, 7)
+        minWordLabel = QLabel('Sensitivity')
+        gridLayout.addWidget(minWordLabel, row, 8)
 
         for webPage in webPages:
             row = row + 1
@@ -313,6 +318,13 @@ class SettingsView(QDialog):
             frequencySlider.setValue(webPages[webPage].getFrequency())
             self.connect(frequencySlider, SIGNAL('valueChanged(int)'), self.sliderChangeBuilder(webPage) )
             gridLayout.addWidget(frequencySlider, row, 7)
+
+            wordCountSpinBox = QSpinBox()
+            wordCountSpinBox.setMinimum(options.MIN_WC_THRESHOLD)
+            wordCountSpinBox.setMaximum(options.MAX_WC_THRESHOLD)
+            wordCountSpinBox.setValue(webPages[webPage].getWCThreshold())
+            self.connect(wordCountSpinBox, SIGNAL('valueChanged(int)'), self.spinboxChangeBuilder(webPage))
+            gridLayout.addWidget(wordCountSpinBox, row, 8)
 
             removeButton = QPushButton('Remove')
             self.connect(removeButton, SIGNAL('clicked()'), self.removeWebPageBuilder((webPage)))

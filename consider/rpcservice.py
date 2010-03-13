@@ -28,8 +28,8 @@ class XmlRpcUsers(xmlrpc.XMLRPC):
 
     def xmlrpc_getWebPages(self, user):
         return self.service.getWebPages(user)
-    def xmlrpc_addWebPage(self, user, webPage, notificationTypes, frequency):
-        return self.service.addWebPage(user, webPage, notificationTypes, frequency)
+    def xmlrpc_addWebPage(self, user, webPage, notificationTypes, frequency, wcThreshold):
+        return self.service.addWebPage(user, webPage, notificationTypes, frequency, wcThreshold)
     def xmlrpc_getNotificationTypes(self, user, webPage):
         return self.service.getNotificationTypes(user, webPage)
     def xmlrpc_getFrequency(self, user, webPage):

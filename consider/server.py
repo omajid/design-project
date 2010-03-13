@@ -177,9 +177,10 @@ class MonitorService(service.Service):
             log.msg('Returning: ' + str(webPages))
             return defer.succeed(webPages)
 
-    def addWebPage(self, username, webPage, notificationTypes, frequency):
+    def addWebPage(self, username, webPage, notificationTypes, frequency, wcThreshold):
         log.msg('REQUEST: addWebPage(' + str(username) + ', ' + str(webPage) + 
-                ', ' +  str(notificationTypes) + ', ' + str(frequency) +  ')')
+                ', ' +  str(notificationTypes) + ', ' + str(frequency) +  ')' +
+                ', ' +  str(wcThreshold))
 
         from consider.notifications import options
 
@@ -189,6 +190,7 @@ class MonitorService(service.Service):
         notificationOptions = options.NotificationOptions()
         notificationOptions.setTypes(notificationTypes)
         notificationOptions.setFrequency(frequency)
+        notificationOptions.setWCThreshold(wcThreshold)
         if id == None:
             log.msg('Invalid user')
         else:
@@ -279,8 +281,10 @@ class MonitorService(service.Service):
         user.webPages[webPage].setLastSeenEntry(notificationType, latestEntry)
         if latestEntry == lastSeenEntry:
             return defer.succeed('')
+
+        threshold = user.webPages[webPage].getWCThreshold()
         log.msg('getting diff between ' + str(lastSeenEntry) + ' and ' + str(latestEntry))
-        return defer.succeed(self.cache.getContentDiff(webPage, lastSeenEntry, latestEntry))
+        return defer.succeed(self.cache.getContentDiff(webPage, lastSeenEntry, latestEntry, threshold))
 
     def _getIdForUser(self, user):
         id = None;
