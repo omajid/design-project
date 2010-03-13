@@ -8,6 +8,19 @@ MIN_FREQUENCY = 1
 MIN_WC_THRESHOLD = 0
 MAX_WC_THRESHOLD = 50
 
+def getDelayForFrequency(frequency):
+    '''Returns the delay in seconds that the frequency corresponds to'''
+    if frequency not in range(MIN_FREQUENCY, MAX_FREQUENCY):
+        raise exceptions.ValueError()
+
+    if frequency == 1:
+        return 60 # 1 minute
+    elif frequency == 2:
+        return 60 * 60 # 1 hour
+    elif frequency == 3:
+        return 24 * 60 * 60 # 1 day
+
+
 def getClientNotificationOption():
     notification = NotificationOptions([NOTIFICATION_TYPE_CLIENT])
     return notification
@@ -21,15 +34,16 @@ def getSmsNotificationOption():
     return notification
 
 class NotificationOptions(object):
-    def __init__(self, types = [], lastSeen = {}):
+    def __init__(self, types = [], lastSeenEntry = {}, lastSeenTimestamp = {}):
         '''
 
         types: a list of constants indicating the types of notification
         '''
         self._types = types
-        self._frequency = 0
-        self._lastSeen = lastSeen
-        self._wcThreshold = 0
+        self._frequency = MIN_FREQUENCY
+        self._lastSeenEntry = lastSeenEntry
+        self._lastSeenTimestamp = lastSeenTimestamp
+        self._wcThreshold = MIN_WC_THRESHOLD
 
     def __str__(self):
         return 'Notifying using: ' + str(self._types)
@@ -60,14 +74,24 @@ class NotificationOptions(object):
             minCount = MAX_WC_THRESHOLD
         self._wcThreshold = minCount
 
-    def getLastSeen(self, type):
+    def getLastSeenEntry(self, type):
         '''get the name of the last seen cache entry for some type of notification'''
         try:
-            return self._lastSeen[type]
+            return self._lastSeenEntry[type]
         except exceptions.KeyError, e:
             return None
 
-    def setLastSeen(self, type, lastSeen):
+    def setLastSeenEntry(self, type, lastSeenEntry):
         '''set the name of the last seen cache entry for the type of notification'''
-        self._lastSeen[type] = lastSeen
+        self._lastSeenEntry[type] = lastSeenEntry
+
+    def getLastSeenTimestamp(self, type):
+        try:
+            return self._lastSeenTimestamp[type]
+        except exceptions.KeyError, e:
+            return None
+
+    def setLastSeenTimestamp(self, type, lastSeenTimestamp):
+        self._lastSeenTimestamp[type] = lastSeenTimestamp
+
 

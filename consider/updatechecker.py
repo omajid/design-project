@@ -5,6 +5,7 @@ from PyQt4.QtGui import QApplication, QDialog, QTextEdit, QVBoxLayout, QLabel, \
 from PyQt4.QtCore import QString, SIGNAL, QRect, QTimer
 
 from consider.settings import Settings
+from consider.notifications import options
 from consider import debug
 
 class UpdateCheckerController:
@@ -47,15 +48,30 @@ class UpdateCheckerModel:
         self.diff = {}
 
     def checkForUpdates(self, forced):
+        from time import time
+
         if debug.verbose:
             print('DEBUG: Check for updates')
 
         self.diff = {}
         server = xmlrpclib.Server(self.settings.serverAddress)
         webPages = self.settings.getWebPages();
-        webPages = [ webPage for webPage in webPages 
-                    if 'client' in self.settings.webPages[webPage].getNotificationTypes() ]
-        for webPage in webPages:
+        webPagesToCheck = [ webPage for webPage in webPages
+                    if options.NOTIFICATION_TYPE_CLIENT in self.settings.webPages[webPage].getNotificationTypes() ]
+        for webPage in webPagesToCheck:
+            if debug.verbose:
+                print('DEBUG: last seen = ' + 
+                        str(webPages[webPage].getLastSeenTimestamp(options.NOTIFICATION_TYPE_CLIENT)))
+            lastSeen = webPages[webPage].getLastSeenTimestamp(options.NOTIFICATION_TYPE_CLIENT)
+            frequency = webPages[webPage].getFrequency()
+            if debug.verbose:
+                print('DEBUG: frequency: ' + str(frequency))
+            if lastSeen != None:
+                # only check if we havent checked it for a while
+                # finout out from user's options how much delay
+                if (int(time()) - int(lastSeen)) <  options.getDelayForFrequency(frequency):
+                    continue
+            webPages[webPage].setLastSeenTimestamp(options.NOTIFICATION_TYPE_CLIENT, time())
             if debug.verbose:
                 print('DEBUG: Checking ' + str(webPage))
             diff = server.getNewDiff(self.settings.username, webPage)
