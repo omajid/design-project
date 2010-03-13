@@ -90,6 +90,7 @@ class UserSettingsStorage:
             cursor = connection.cursor()
             log.msg('UserSettingsStorage.store(): Reading database')
             rows = cursor.execute('SELECT * FROM ' + self._userTable)
+
             for row in rows: 
                 # (id, user, password, email)
                 user = account.UserAccount()
@@ -103,7 +104,7 @@ class UserSettingsStorage:
                     # (id, userId, webPage, notifyClient, notifyEmail, notifySms, frequency)
                     notificationOptions = options.NotificationOptions()
                     notificationTypes = []
-                    webPage = webPageRow[2]
+                    webPage = str(webPageRow[2])
                     if (webPageRow[3] != 0):
                         notificationTypes.append(options.NOTIFICATION_TYPE_CLIENT)
                     if (webPageRow[4] != 0):
@@ -113,7 +114,7 @@ class UserSettingsStorage:
                     notificationOptions.setTypes(notificationTypes)
                     notificationOptions.setFrequency(webPageRow[6])
                     user.webPages[webPage] = notificationOptions
-            users.append(user)
+                users.append(user)
         except sqlite3.OperationalError, e:
             log.msg('UserSettingsStorage.store(): Error reading database: ' + str(e))
         return users
@@ -166,7 +167,8 @@ class WebPageCache:
         ##processedData = soup.prettify()
         #file.write(processedData)
         #file.close()
-        downloadPage (webPage, open(cacheLocation, 'w'))
+        webPage = str(webPage)
+        downloadPage (webPage, open( str(cacheLocation), 'w'))
 
         log.msg('WebPageCache.cacheWebPage(): cached ' + str(webPage) + ' at ' + os.path.abspath(cacheLocation))
         return

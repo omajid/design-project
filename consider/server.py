@@ -81,6 +81,7 @@ class MonitorService(service.Service):
     def sendNotifications(self):
         log.msg("MonitorService.sendNotifications(): Sending out notifications");
 
+        from time import time
         from consider.notifications import options
 
         for user in self.users:
@@ -88,13 +89,25 @@ class MonitorService(service.Service):
                 notificationOptions = user.webPages[webPage]
                 log.msg(str(notificationOptions))
                 notificationTypes = notificationOptions.getNotificationTypes()
-                diff = self.getNewDiff(user.name, webPage, options.NOTIFICATION_TYPE_EMAIL)
-                if options.NOTIFICATION_TYPE_CLIENT in notificationTypes:
-                    diff.addCallback(self._sendEmail, args=[user, webPage])
-                    diff.addErrback(self._sendEmailError))
-                if options.NOTIFICATION_TYPE_SMS in notificationTypes:
-                    log.msg('Notifying ' + user.name + ' about ' +
-                            str(webPage) + ' through sms')
+                if (options.NOTIFICATION_TYPE_EMAIL in notificationTypes) or (options.NOTIFICATION_TYPE_SMS in notificationTypes):
+                    lastSeen = user.webPages[webPage].getLastSeenTimestamp(options.NOTIFICATION_TYPE_EMAIL)
+                    frequency = user.webPages[webPage].getFrequency()
+                    if lastSeen != None:
+                        # only check if we havent checked it for a while
+                        # finout out from user's options how much delay
+                        if (int(time()) - int(lastSeen)) <  options.getDelayForFrequency(frequency):
+                            continue
+                    user.webPages[webPage].setLastSeenTimestamp(options.NOTIFICATION_TYPE_EMAIL, time())
+
+                    diff = self.getNewDiff(user.name, webPage, options.NOTIFICATION_TYPE_EMAIL)
+                    if options.NOTIFICATION_TYPE_EMAIL in notificationTypes:
+                        diff.addCallback(self._sendEmail, args=[user, webPage])
+                        diff.addErrback(self._sendEmailError)
+                    if options.NOTIFICATION_TYPE_SMS in notificationTypes:
+                        log.msg('Notifying ' + user.name + ' about ' +
+                                str(webPage) + ' through sms')
+                else:
+                    log.msg('Skipping ' + str(webPage))
 
     def getResource(self):
         return rpcservice.XmlRpcUsers(self)
@@ -247,20 +260,23 @@ class MonitorService(service.Service):
         if id == None:
             return defer.fail('no user found')
         user = self.users[id]
+
+        # only return a new diff if there are things the user hasnt seen
         entries = self.cache.getEntries(webPage)
-        lastSeenEntry = user.webPages[webPage].getLastSeen(notificationType)
+        lastSeenEntry = user.webPages[webPage].getLastSeenEntry(notificationType)
         log.msg('last seen entry for ' + str(notificationType) + ' notification : ' + str(lastSeenEntry))
         if (lastSeenEntry == None) or (lastSeenEntry == '') or (not lastSeenEntry in entries):
             log.msg('last seen entry not found, no diff computed')
             if len(entries) > 0:
-                user.webPages[webPage].setLastSeen(notificationType, entries[0])
+                user.webPages[webPage].setLastSeenEntry(notificationType, entries[0])
             return defer.succeed('')
         if not len(entries) > 1:
             log.msg('not enough entries cached to compute a diff')
             return defer.succeed('')
+
         # mark the web page as last seen now
         latestEntry = entries[0]
-        user.webPages[webPage].setLastSeen(notificationType, latestEntry)
+        user.webPages[webPage].setLastSeenEntry(notificationType, latestEntry)
         if latestEntry == lastSeenEntry:
             return defer.succeed('')
         log.msg('getting diff between ' + str(lastSeenEntry) + ' and ' + str(latestEntry))
