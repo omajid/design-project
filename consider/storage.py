@@ -214,9 +214,11 @@ class WebPageCache:
             # no older file found; no diff
             return ([''], [''])
 
-    def _extractTextFromHtml(self, content):
+    def _extractTextFromHtml(self, content, webPage):
         from BeautifulSoup import BeautifulSoup
-       
+        import re
+        import urlparse
+
         unprocessedSoup = BeautifulSoup(''.join(content))
 
         soup = BeautifulSoup(unprocessedSoup.prettify())
@@ -231,6 +233,13 @@ class WebPageCache:
             junk = soup.body.findAll(style=currentStyle)
             [junkSection.extract() for junkSection in junk]
 
+        hostname = urlparse.urlparse(webPage).hostname
+        result = re.search(r'.*slashdot\.org\b', hostname)
+        if result:
+            log.msg('WebPageCache._extractTextFromHtml: ' + webPage + ' is slashdot.org')
+            junk = soup.body.findAll(True, {'class': re.compile(r'\badvertisement\b') } )
+            [junkSection.extract() for junkSection in junk]
+
         processedContent = soup.body(text = True)
         return processedContent
 
@@ -238,9 +247,9 @@ class WebPageCache:
         processedContent = [line.strip() for line in content if len(line.strip()) != 0]
         return processedContent
 
-    def _processInputText(self, content):
+    def _processInputText(self, content, webPage):
         processedContent = content
-        processedContent = self._extractTextFromHtml(processedContent)
+        processedContent = self._extractTextFromHtml(processedContent, webPage)
         processedContent = self._removeBlanks(processedContent)
 
         return processedContent
@@ -325,8 +334,8 @@ class WebPageCache:
         olderFileContents = self.getContentsForEntry(webPage, olderEntry)
         latestFileContents = self.getContentsForEntry(webPage, newerEntry)
 
-        processedOldContent = self._processInputText(olderFileContents)
-        processedNewContent = self._processInputText(latestFileContents)
+        processedOldContent = self._processInputText(olderFileContents, webPage)
+        processedNewContent = self._processInputText(latestFileContents, webPage)
 
         if debug.verbose:
             fileOldText = open ('oldtext.txt', 'w')
