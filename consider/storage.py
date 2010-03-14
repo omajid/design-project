@@ -149,36 +149,55 @@ class WebPageCache:
         m.update(link)
         cacheLocation =  m.hexdigest() + '/'
         location = os.path.join(self.cacheLocation, cacheLocation)
+        if not os.path.isdir(location):
+            dir = os.makedirs(location)
         log.msg('WebPageCache._getCacheLocation: ' + str(link) + ' -> ' + str(location))
         return location
 
+    def _getTempCacheLocation(self, link):
+        m = hashlib.md5()
+        m.update(link)
+        cacheLocation =  m.hexdigest() + '/'
+        cacheLocation = os.path.join('temp' , cacheLocation)
+        location = os.path.join(self.cacheLocation, cacheLocation)
+        if not os.path.isdir(location):
+            dir = os.makedirs(location)
+        log.msg('WebPageCache._getTempCacheLocation: ' + str(link) + ' -> ' + str(location))
+        return location
+
     def cacheWebPage(self, webPage):
+        from twisted.web.client import getPage
+
         if debug.noUpdateCache:
             return
 
-        import datetime
-        from BeautifulSoup import BeautifulSoup
-        from twisted.web.client import downloadPage
-
         log.msg('WebPageCache.cacheWebPage(): caching webPage' + str(webPage))
-        #data = urllib2.urlopen(webPage)
-        cacheLocation = str(self._getCacheLocation(webPage))
-        log.msg('Cache location for ' + webPage + ' is ' + cacheLocation)
-        if not os.path.isdir(cacheLocation):
-            dir = os.makedirs(cacheLocation)
-        cacheLocation = os.path.join(cacheLocation, str(datetime.datetime.now().isoformat()))
-        #file = open(cacheLocation, 'w') 
-        #rawData = data.read()
-        ##soup = BeautifulSoup(rawData)
-        ##processedData = rawData
-        ##processedData = soup.prettify()
-        #file.write(processedData)
-        #file.close()
-        webPage = str(webPage)
-        downloadPage (webPage, open( str(cacheLocation), 'w'))
 
-        log.msg('WebPageCache.cacheWebPage(): cached ' + str(webPage) + ' at ' + os.path.abspath(cacheLocation))
+        deferred = getPage(webPage)
+        deferred.addCallback(self.webPageDownloaded, webPage)
+        deferred.addErrback(self.webPageDownloadFailed)
         return
+
+    def webPageDownloaded(self, webPageContent, webPage):
+        import tempfile
+        import datetime
+
+        log.msg('WebPabeCache.webPageDownloaded(): got contents of ' + webPage)
+        cacheLocation = self._getCacheLocation(webPage)
+        cacheLocation = os.path.join(cacheLocation, str(datetime.datetime.now().isoformat()))
+        absCacheLocation = os.path.abspath(cacheLocation)
+
+        tempFileName = self._getTempCacheLocation(webPage)
+        tempFileName = os.path.join(tempFileName, str(datetime.datetime.now().isoformat()))
+        tempFile = open(tempFileName, 'w')
+        tempFile.write(webPageContent)
+        tempFile.close()
+        os.rename(tempFileName, absCacheLocation)
+        log.msg('WebPageCache.webPageDownloaded(): cached ' + str(webPage) + ' at ' + absCacheLocation)
+
+    def webPageDownloadFailed(self, error):
+        log.msg('WebPageCache.webPageDownloadFailed(): <-- yes, failed')
+        log.msg(error)
 
     def startCaching(self, webPage):
         from twisted.internet import reactor
@@ -236,7 +255,7 @@ class WebPageCache:
             [junkSection.extract() for junkSection in junk]
 
         hostname = urlparse.urlparse(webPage).hostname
-        for rule in inputrules.nameRules: 
+        for rule in inputrules.nameRules:
             result = re.search(rule, hostname)
             if result:
                 soup = inputrules.nameRules[rule](soup)
