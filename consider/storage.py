@@ -219,6 +219,8 @@ class WebPageCache:
         import re
         import urlparse
 
+        from consider.rules import inputrules
+
         unprocessedSoup = BeautifulSoup(''.join(content))
 
         soup = BeautifulSoup(unprocessedSoup.prettify())
@@ -234,11 +236,10 @@ class WebPageCache:
             [junkSection.extract() for junkSection in junk]
 
         hostname = urlparse.urlparse(webPage).hostname
-        result = re.search(r'.*slashdot\.org\b', hostname)
-        if result:
-            log.msg('WebPageCache._extractTextFromHtml: ' + webPage + ' is slashdot.org')
-            junk = soup.body.findAll(True, {'class': re.compile(r'\badvertisement\b') } )
-            [junkSection.extract() for junkSection in junk]
+        for rule in inputrules.nameRules: 
+            result = re.search(rule, hostname)
+            if result:
+                soup = inputrules.nameRules[rule](soup)
 
         processedContent = soup.body(text = True)
         return processedContent
@@ -305,7 +306,6 @@ class WebPageCache:
         for pair in changePairs:
             currentAdd = ' '.join(filteredResult[pair[0]:pair[1]])
             numWords = len(currentAdd.split())
-            print (numWords)
             if numWords < minCount:
                 lineRange = range(pair[0], pair[1]+1)
                 lineRange.reverse()
