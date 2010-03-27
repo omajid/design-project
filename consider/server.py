@@ -69,14 +69,15 @@ class MonitorService(service.Service):
             log.msg('Notifying ' + user.name + ' about ' +
                     str(webPage) + ' through email ' + str(user.emailAddress))
             emailNotification = email.EmailNotification()
+            emailNotification.setSubject(webPage + ' changed')
             emailNotification.setText(str(diff))
             emailNotification.setDestination([str(user.emailAddress)])
             emailNotification.username = str('consider.project@gmail.com')
             emailNotification.password = str('PASSWORD_HERE')
             emailNotification.notify()
 
-    def _sendEmailError(self):
-        log.msg('MonitorService._sendEmailError(): Error generating diff')
+    def _sendEmailError(self, args):
+        log.msg('MonitorService._sendEmailError(): Error generating diff' + str(args))
 
     def sendNotifications(self):
         log.msg("MonitorService.sendNotifications(): Sending out notifications");
@@ -245,6 +246,22 @@ class MonitorService(service.Service):
         frequency = self.users[id].webPages[webPage].getFrequency()
         log.msg('Returning ' + str(frequency))
         return frequency
+
+    def getWCThreshold(self, username, webPage):
+        log.msg('REQUEST: getWCThreshold(' + str(username) + ', ' + 
+                str(webPage) + ')')
+        user = account.UserAccount(username)
+        id = self._getIdForUser(user)
+        if id == None:
+            return defer.fail('user not found')
+
+        if webPage not in self.users[id].webPages:
+            return defer.fail('web page not found')
+
+        sensitivity = self.users[id].webPages[webPage].getWCThreshold()
+        log.msg('Returning ' + str(sensitivity))
+        return sensitivity
+
 
     def getNewDiff(self, username, webPage, notificationType = None):
         '''generate and return the diff for the last seen cache entries

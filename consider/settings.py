@@ -79,6 +79,7 @@ class Settings(designpatterns.Borg):
             notificationOptions = options.NotificationOptions()
             notificationOptions.setTypes(server.getNotificationTypes(self.username, page))
             notificationOptions.setFrequency(server.getFrequency(self.username, page))
+            notificationOptions.setWCThreshold(server.getWCThreshold(self.username, page))
             self.webPages[page] = notificationOptions
         
         self._notifyObservers()
@@ -171,6 +172,8 @@ class Settings(designpatterns.Borg):
         try:
             connection = httplib.HTTPConnection(url.netloc)
             connection.request('HEAD', url.path)
+            #TODO: Doesn't work for some sites, replace with GET
+            #also check response code
             response = connection.getresponse()
             return webPage
         except socket.gaierror, e:
@@ -275,8 +278,8 @@ class SettingsView(QDialog):
         gridLayout.addWidget(clientLabel, row, 4)
         emailLabel = QLabel('Email')
         gridLayout.addWidget(emailLabel, row, 5)
-        smsLabel = QLabel('SMS')
-        gridLayout.addWidget(smsLabel, row, 6)
+        #smsLabel = QLabel('SMS')
+        #gridLayout.addWidget(smsLabel, row, 6)
         frequencyLabel = QLabel('Frequency')
         gridLayout.addWidget(frequencyLabel, row, 7)
         minWordLabel = QLabel('Sensitivity')
@@ -303,13 +306,13 @@ class SettingsView(QDialog):
                     self.checkBoxHandlerBuilder(webPage, options.NOTIFICATION_TYPE_EMAIL))
             gridLayout.addWidget(emailCheck, row, 5)
 
-            smsCheck = QCheckBox()
-            if options.NOTIFICATION_TYPE_SMS in webPages[webPage].getNotificationTypes():
-                smsCheck.setChecked(1)
-            self.connect(smsCheck,
-                    SIGNAL('stateChanged(int)'),
-                    self.checkBoxHandlerBuilder(webPage, options.NOTIFICATION_TYPE_SMS))
-            gridLayout.addWidget(smsCheck, row, 6)
+            #smsCheck = QCheckBox()
+            #if options.NOTIFICATION_TYPE_SMS in webPages[webPage].getNotificationTypes():
+            #    smsCheck.setChecked(1)
+            #self.connect(smsCheck,
+            #        SIGNAL('stateChanged(int)'),
+            #        self.checkBoxHandlerBuilder(webPage, options.NOTIFICATION_TYPE_SMS))
+            #gridLayout.addWidget(smsCheck, row, 6)
 
             frequencySlider = QSlider(Qt.Horizontal)
             frequencySlider.setTracking(False)

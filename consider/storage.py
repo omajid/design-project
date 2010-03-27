@@ -50,7 +50,8 @@ class UserSettingsStorage:
                 notifyClient INTEGER,
                 notifyEmail INTEGER,
                 notifySms INTEGER,
-                frequency INTEGER
+                frequency INTEGER,
+                sensitivity INTEGER
                 )''')
         except sqlite3.OperationalError:
             log.msg('UserSettingsStorage.store(): Table already exists')
@@ -68,10 +69,12 @@ class UserSettingsStorage:
                     notifyClient = options.NOTIFICATION_TYPE_CLIENT in notificationOptions.getNotificationTypes()
                     notifyEmail = options.NOTIFICATION_TYPE_EMAIL in notificationOptions.getNotificationTypes()
                     notifySms = options.NOTIFICATION_TYPE_SMS in notificationOptions.getNotificationTypes()
-                    t = (userId, unicode(webPage), notifyClient, notifyEmail, notifySms, notificationOptions.getFrequency())
+                    t = (userId, unicode(webPage), notifyClient, notifyEmail, 
+                            notifySms, notificationOptions.getFrequency(), notificationOptions.getWCThreshold())
+                    log.msg('UserSettingsStorage.store: Min word count filter = ' + str(notificationOptions.getWCThreshold()))
                     cursor.execute('INSERT INTO ' + self._webPagesTable + ' ' +
-                            '(id, userId, webPage, notifyClient, notifyEmail, notifySms, frequency)' + 
-                            ' ' + 'VALUES (NULL, ?, ?, ?, ?, ?, ?)', t)
+                            '(id, userId, webPage, notifyClient, notifyEmail, notifySms, frequency, sensitivity)' + 
+                            ' ' + 'VALUES (NULL, ?, ?, ?, ?, ?, ?, ?)', t)
             connection.commit()
             log.msg('UserSettingsStorage.store(): all user settings saved')
         except sqlite3.OperationalError, e:
@@ -101,7 +104,7 @@ class UserSettingsStorage:
 
                 webPageRows = cursor.execute('SELECT * FROM ' + self._webPagesTable + ' WHERE userId=?', (userId,))
                 for webPageRow in webPageRows:
-                    # (id, userId, webPage, notifyClient, notifyEmail, notifySms, frequency)
+                    # (id, userId, webPage, notifyClient, notifyEmail, notifySms, frequency, sensitivity)
                     notificationOptions = options.NotificationOptions()
                     notificationTypes = []
                     webPage = str(webPageRow[2])
@@ -113,6 +116,7 @@ class UserSettingsStorage:
                         notificationTypes.append(options.NOTIFICATION_TYPE_SMS)
                     notificationOptions.setTypes(notificationTypes)
                     notificationOptions.setFrequency(webPageRow[6])
+                    notificationOptions.setWCThreshold(webPageRow[7])
                     user.webPages[webPage] = notificationOptions
                 users.append(user)
         except sqlite3.OperationalError, e:
@@ -301,7 +305,7 @@ class WebPageCache:
         
         return additions
 
-    def _minWordCountFilter(self, content, minCount = 1):
+    def _minWordCountFilter(self, content, minCount = 0):
         #requires _extractNewItems to be run on content before being passed to this function
 
         if not content:
@@ -325,7 +329,7 @@ class WebPageCache:
         for pair in changePairs:
             currentAdd = ' '.join(filteredResult[pair[0]:pair[1]])
             numWords = len(currentAdd.split())
-            if numWords < minCount:
+            if numWords <= minCount:
                 lineRange = range(pair[0], pair[1]+1)
                 lineRange.reverse()
                 for lineToRemove in lineRange:
@@ -345,7 +349,9 @@ class WebPageCache:
 
     def getContentDiff(self, webPage, olderEntry, newerEntry, wcThreshold):
         '''returns a tuple (content, last entry seen)'''
-        
+
+        log.msg('getContentDiff: Value for wcThreshold = ' + str(wcThreshold))
+
         import difflib
         from textwrap import TextWrapper
 
@@ -356,6 +362,7 @@ class WebPageCache:
         processedOldContent = self._processInputText(olderFileContents, webPage)
         processedNewContent = self._processInputText(latestFileContents, webPage)
 
+        #TODO fix unicode errors
         if debug.verbose:
             fileOldText = open ('oldtext.txt', 'w')
             fileOldText.write('\n'.join(processedOldContent))

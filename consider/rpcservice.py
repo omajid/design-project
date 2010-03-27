@@ -34,6 +34,8 @@ class XmlRpcUsers(xmlrpc.XMLRPC):
         return self.service.getNotificationTypes(user, webPage)
     def xmlrpc_getFrequency(self, user, webPage):
         return self.service.getFrequency(user, webPage)
+    def xmlrpc_getWCThreshold(self, user, webPage):
+        return self.service.getWCThreshold(user, webPage)
     def xmlrpc_removeWebPage(self, user, webPage):
         return self.service.removeWebPage(user, webPage)
 

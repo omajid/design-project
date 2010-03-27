@@ -42,9 +42,12 @@ class UpdateDisplayView(QDialog):
         self.diffDisplay = QTextBrowser()
         self.refreshButton = QPushButton()
         self.refreshButton.setText('&Refresh')
+        self.linkButton = QPushButton()
+        self.linkButton.setIcon(QIcon('/usr/share/icons/default.kde4/32x32/actions/go-jump-locationbar.png'))
 
         headerLayout = QHBoxLayout()
         headerLayout.addWidget(self.webpageComboBox, 1)
+        headerLayout.addWidget(self.linkButton)
         headerLayout.addWidget(self.refreshButton)
 
         layout = QVBoxLayout()
@@ -53,7 +56,12 @@ class UpdateDisplayView(QDialog):
         self.setLayout(layout)
         self.connect(self.webpageComboBox, SIGNAL('currentIndexChanged(int)'), self.updateUi)
         self.connect(self.refreshButton, SIGNAL('clicked()'), self.updateUi)
+        self.connect(self.linkButton, SIGNAL('clicked()'), self.openLink)
         self.updateUi()
+
+    def openLink (self):
+        selectedWebpage = self.webpageComboBox.currentText()
+        QDesktopServices.openUrl(QUrl(selectedWebpage))
 
     def updateUi (self):
         selectedWebpage = self.webpageComboBox.currentText()
