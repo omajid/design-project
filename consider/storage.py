@@ -212,7 +212,7 @@ class WebPageCache:
         cacheLocation = self._getCacheLocation(webPage)
         entries = os.listdir(cacheLocation)
         entries.sort(reverse=True)
-        log.msg('WebPageCache.getCacheEntries(): caching entries are ' + str(entries))
+        log.msg('WebPageCache.getCacheEntries(): ' + str(len(entries)) + ' entries cached')
         return entries
 
     def getContentsForEntry(self, webPage, entry):
@@ -243,6 +243,7 @@ class WebPageCache:
         import urlparse
 
         from consider.rules import inputrules
+        from consider import diff
 
         unprocessedSoup = BeautifulSoup(''.join(content))
 
@@ -265,6 +266,9 @@ class WebPageCache:
                 soup = inputrules.nameRules[rule](soup)
 
         processedContent = soup.body(text = True)
+
+        processedContent = [diff.unescapeEntities(line) for line in processedContent]
+
         return processedContent
 
     def _removeBlanks(self, content):
